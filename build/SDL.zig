@@ -60,6 +60,7 @@ pub fn linkSDL2(b: *std.Build, exe: *std.Build.Step.Compile, target: std.zig.Cro
             "-DSDL_SHARED=OFF",
             "-DSDL_STATIC=ON",
             "-DSDL_TEST=OFF",
+            "-DSDL_VIDEO=ON",
         });
         break :blk cmake_configure;
     } else blk: {
