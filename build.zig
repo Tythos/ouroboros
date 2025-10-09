@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const SDL = @import("build/SDL.zig");
 
 pub fn build(b: *std.Build) void {
     // Verify we're using Zig 0.11.x
@@ -18,6 +19,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    
+    // Build and link SDL2
+    SDL.linkSDL2(b, exe, target);
+    
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
