@@ -3,11 +3,12 @@ const builtin = @import("builtin");
 const SDL = @import("build/SDL.zig");
 
 pub fn build(b: *std.Build) void {
-    // Verify we're using Zig 0.11.x
+    // Verify we're using Zig 0.12.x
     const required_major = 0;
-    const required_minor = 11;
-    if (builtin.zig_version.major != required_major or builtin.zig_version.minor != required_minor) {
-        @panic("This project requires Zig 0.11.x");
+    const required_minor = 12;
+    const required_patch = 1;
+    if (builtin.zig_version.major != required_major or builtin.zig_version.minor != required_minor or builtin.zig_version.patch != required_patch) {
+        @panic("This project requires Zig 0.12.1");
     }
 
     const target = b.standardTargetOptions(.{});
@@ -15,7 +16,7 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = "ouroboros",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -36,7 +37,7 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_cmd.step);
 
     const exe_unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });                                                                                                                                                         

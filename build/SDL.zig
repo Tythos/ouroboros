@@ -23,7 +23,7 @@ const CopyConfigStep = struct {
 
     fn make(step: *std.Build.Step, progress: *std.Progress.Node) anyerror!void {
         _ = progress;
-        const self: *CopyConfigStep = @fieldParentPtr(CopyConfigStep, "step", step);
+        const self: *CopyConfigStep = @fieldParentPtr("step", step);
         _ = self;
 
         const src_path = "SDL/build/include-config-release/SDL2/SDL_config.h";
@@ -39,7 +39,7 @@ const CopyConfigStep = struct {
 };
 
 // Build SDL2 using CMake, then link it to the provided executable
-pub fn linkSDL2(b: *std.Build, exe: *std.Build.Step.Compile, target: std.zig.CrossTarget) void {
+pub fn linkSDL2(b: *std.Build, exe: *std.Build.Step.Compile, target: std.Build.ResolvedTarget) void {
     // Check if CMake has already been configured (cache exists)
     const cache_exists = blk: {
         std.fs.cwd().access("SDL/build/CMakeCache.txt", .{}) catch {
@@ -87,15 +87,15 @@ pub fn linkSDL2(b: *std.Build, exe: *std.Build.Step.Compile, target: std.zig.Cro
     exe.step.dependOn(&copy_step.step);
 
     // Add SDL include path (after copying SDL_config.h, all headers are here)
-    exe.addIncludePath(.{ .path = "SDL/build/include" });
+    exe.addIncludePath(b.path("SDL/build/include"));
     
     // Link the built static library directly
-    const native_target = (std.zig.system.NativeTargetInfo.detect(target) catch unreachable).target;
+    const native_target = target.result;
     
     if (native_target.os.tag == .windows) {
-        exe.addObjectFile(.{ .path = "SDL/build/Release/SDL2-static.lib" });
+        exe.addObjectFile(b.path("SDL/build/Release/SDL2-static.lib"));
     } else {
-        exe.addObjectFile(.{ .path = "SDL/build/libSDL2.a" });
+        exe.addObjectFile(b.path("SDL/build/libSDL2.a"));
     }
     
     // Link system dependencies based on platform
