@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const SDL = @import("build/SDL.zig");
+const zlm_build = @import("build/zlm.zig");
 
 pub fn build(b: *std.Build) void {
     // Verify we're using Zig 0.12.x
@@ -23,6 +24,9 @@ pub fn build(b: *std.Build) void {
     
     // Build and link SDL2
     SDL.linkSDL2(b, exe, target);
+    
+    // Add zlm math library
+    zlm_build.addZlm(b, exe, target, optimize);
     
     b.installArtifact(exe);
 

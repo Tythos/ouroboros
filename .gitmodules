@@ -2,3 +2,6 @@
 	path = SDL
 	url = https://github.com/libsdl-org/SDL.git
 	branch = release-2.32.x
+[submodule "zlm"]
+	path = zlm
+	url = https://github.com/Tythos/zlm.git

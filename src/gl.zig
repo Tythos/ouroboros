@@ -51,6 +51,7 @@ pub var glUseProgram: *const fn (GLuint) callconv(.C) void = undefined;
 pub var glDeleteProgram: *const fn (GLuint) callconv(.C) void = undefined;
 pub var glGetUniformLocation: *const fn (GLuint, [*c]const GLchar) callconv(.C) GLint = undefined;
 pub var glUniform1f: *const fn (GLint, GLfloat) callconv(.C) void = undefined;
+pub var glUniformMatrix4fv: *const fn (GLint, GLsizei, GLboolean, [*c]const GLfloat) callconv(.C) void = undefined;
 
 pub var glGenVertexArrays: *const fn (GLsizei, [*c]GLuint) callconv(.C) void = undefined;
 pub var glBindVertexArray: *const fn (GLuint) callconv(.C) void = undefined;
@@ -100,6 +101,7 @@ pub fn loadFunctions() void {
     glDeleteProgram = loadFunction(@TypeOf(glDeleteProgram), "glDeleteProgram");
     glGetUniformLocation = loadFunction(@TypeOf(glGetUniformLocation), "glGetUniformLocation");
     glUniform1f = loadFunction(@TypeOf(glUniform1f), "glUniform1f");
+    glUniformMatrix4fv = loadFunction(@TypeOf(glUniformMatrix4fv), "glUniformMatrix4fv");
     
     glGenVertexArrays = loadFunction(@TypeOf(glGenVertexArrays), "glGenVertexArrays");
     glBindVertexArray = loadFunction(@TypeOf(glBindVertexArray), "glBindVertexArray");

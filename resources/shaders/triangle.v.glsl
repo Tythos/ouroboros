@@ -5,19 +5,11 @@ layout(location = 1) in vec3 color;
 
 out vec3 fragColor;
 
-uniform float angle;
+uniform mat4 transform;
 
 void main() {
-    // Apply 2D rotation around the Z axis
-    float c = cos(angle);
-    float s = sin(angle);
-    mat2 rotation = mat2(c, s, -s, c);
-    
-    // Rotate the XY coordinates
-    vec2 rotated = rotation * position.xy;
-    
-    // Output position
-    gl_Position = vec4(rotated, position.z, 1.0);
+    // Apply transformation matrix
+    gl_Position = transform * vec4(position, 1.0);
     
     // Pass color to fragment shader
     fragColor = color;

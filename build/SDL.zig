@@ -40,60 +40,89 @@ const CopyConfigStep = struct {
 
 // Build SDL2 using CMake, then link it to the provided executable
 pub fn linkSDL2(b: *std.Build, exe: *std.Build.Step.Compile, target: std.Build.ResolvedTarget) void {
-    // Check if CMake has already been configured (cache exists)
-    const cache_exists = blk: {
-        std.fs.cwd().access("SDL/build/CMakeCache.txt", .{}) catch {
+    const native_target = target.result;
+    
+    // Determine the SDL library path based on platform
+    const sdl_lib_path = if (native_target.os.tag == .windows)
+        "SDL/build/Release/SDL2-static.lib"
+    else
+        "SDL/build/libSDL2.a";
+    
+    const sdl_config_dst = "SDL/build/include/SDL2/SDL_config.h";
+    
+    // Check if the SDL library and config file already exist
+    const lib_exists = blk: {
+        std.fs.cwd().access(sdl_lib_path, .{}) catch {
             break :blk false;
         };
         break :blk true;
     };
     
-    // Only run CMake configure if cache doesn't exist
-    const cmake_step = if (!cache_exists) blk: {
-        const cmake_configure = b.addSystemCommand(&[_][]const u8{
-            "cmake",
-            "-S",
-            "SDL",
-            "-B",
-            "SDL/build",
-            "-DCMAKE_BUILD_TYPE=Release",
-            "-DSDL_SHARED=OFF",
-            "-DSDL_STATIC=ON",
-            "-DSDL_TEST=OFF",
-            "-DSDL_VIDEO=ON",
-            "-DSDL_OPENGL=ON",
-            "-DSDL_VIDEO_OPENGL=ON",
-        });
-        break :blk cmake_configure;
-    } else blk: {
-        // Create a no-op step when cache exists
-        break :blk b.addSystemCommand(&[_][]const u8{ "true" });
+    const config_exists = blk: {
+        std.fs.cwd().access(sdl_config_dst, .{}) catch {
+            break :blk false;
+        };
+        break :blk true;
     };
+    
+    // Only build SDL if the library doesn't exist
+    if (!lib_exists) {
+        // Check if CMake has already been configured (cache exists)
+        const cache_exists = blk: {
+            std.fs.cwd().access("SDL/build/CMakeCache.txt", .{}) catch {
+                break :blk false;
+            };
+            break :blk true;
+        };
+        
+        // Only run CMake configure if cache doesn't exist
+        const cmake_step = if (!cache_exists) blk: {
+            const cmake_configure = b.addSystemCommand(&[_][]const u8{
+                "cmake",
+                "-S",
+                "SDL",
+                "-B",
+                "SDL/build",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DSDL_SHARED=OFF",
+                "-DSDL_STATIC=ON",
+                "-DSDL_TEST=OFF",
+                "-DSDL_VIDEO=ON",
+                "-DSDL_OPENGL=ON",
+                "-DSDL_VIDEO_OPENGL=ON",
+            });
+            break :blk cmake_configure;
+        } else blk: {
+            // Create a no-op step when cache exists
+            break :blk b.addSystemCommand(&[_][]const u8{ "true" });
+        };
 
-    // Always run the build step (CMake will skip if nothing changed)
-    const make_build = b.addSystemCommand(&[_][]const u8{
-        "cmake",
-        "--build",
-        "SDL/build",
-        "--config",
-        "Release",
-    });
-    make_build.step.dependOn(&cmake_step.step);
+        // Run the build step to create the library
+        const make_build = b.addSystemCommand(&[_][]const u8{
+            "cmake",
+            "--build",
+            "SDL/build",
+            "--config",
+            "Release",
+        });
+        make_build.step.dependOn(&cmake_step.step);
 
-    // Copy SDL_config.h to the main include directory (CMake puts it in a separate location)
-    // Create a custom step that uses std.fs for proper cross-platform file operations
-    const copy_step = CopyConfigStep.create(b);
-    copy_step.step.dependOn(&make_build.step);
+        // Copy SDL_config.h to the main include directory (CMake puts it in a separate location)
+        const copy_step = CopyConfigStep.create(b);
+        copy_step.step.dependOn(&make_build.step);
 
-    // Make the executable depend on the CMake build and config copy
-    exe.step.dependOn(&copy_step.step);
+        // Make the executable depend on the CMake build and config copy
+        exe.step.dependOn(&copy_step.step);
+    } else if (!config_exists) {
+        // Library exists but config doesn't - just copy the config
+        const copy_step = CopyConfigStep.create(b);
+        exe.step.dependOn(&copy_step.step);
+    }
 
     // Add SDL include path (after copying SDL_config.h, all headers are here)
     exe.addIncludePath(b.path("SDL/build/include"));
     
     // Link the built static library directly
-    const native_target = target.result;
-    
     if (native_target.os.tag == .windows) {
         exe.addObjectFile(b.path("SDL/build/Release/SDL2-static.lib"));
     } else {

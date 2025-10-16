@@ -1,12 +1,13 @@
 const std = @import("std");
 const gl = @import("gl.zig");
 const shader = @import("shader.zig");
+const zlm = @import("zlm").as(f32);
 
 pub const Renderer = struct {
     program: gl.GLuint,
     vao: gl.GLuint,
     vbo: gl.GLuint,
-    angle_location: gl.GLint,
+    transform_location: gl.GLint,
     
     /// Initialize the renderer: load shaders, create VAO/VBO
     pub fn init(allocator: std.mem.Allocator) !Renderer {
@@ -20,9 +21,9 @@ pub const Renderer = struct {
         );
         
         // Get uniform location
-        const angle_location = gl.glGetUniformLocation(program, "angle");
-        if (angle_location == -1) {
-            std.debug.print("Warning: 'angle' uniform not found in shader\n", .{});
+        const transform_location = gl.glGetUniformLocation(program, "transform");
+        if (transform_location == -1) {
+            std.debug.print("Warning: 'transform' uniform not found in shader\n", .{});
         }
         
         // Define triangle vertices with rainbow colors
@@ -84,7 +85,7 @@ pub const Renderer = struct {
             .program = program,
             .vao = vao,
             .vbo = vbo,
-            .angle_location = angle_location,
+            .transform_location = transform_location,
         };
     }
     
@@ -97,9 +98,16 @@ pub const Renderer = struct {
         // Use our shader program
         gl.glUseProgram(self.program);
         
-        // Set the angle uniform
-        if (self.angle_location != -1) {
-            gl.glUniform1f(self.angle_location, angle);
+        // Create a rotation matrix around the Z axis using zlm
+        const z_axis = zlm.Vec3.new(0, 0, 1);
+        const rotation_matrix = zlm.Mat4.createAngleAxis(z_axis, angle);
+        
+        // Set the transform uniform (mat4)
+        if (self.transform_location != -1) {
+            // OpenGL expects column-major matrices, but zlm stores row-major
+            // We need to transpose before passing to OpenGL
+            const transposed = rotation_matrix.transpose();
+            gl.glUniformMatrix4fv(self.transform_location, 1, gl.GL_FALSE, @ptrCast(&transposed.fields));
         }
         
         // Bind VAO and draw

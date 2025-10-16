@@ -38,9 +38,11 @@
 
 - [x] Organize shader source as runtime resources (`.v.glsl`, `.f.glsl` files)
 
-## Active Sprint
+- [x] Updated SDL build specification to properly cache results w/o recompiling intermediate library
 
-- [ ] Integrate math library (zlm or similar) for Mat4/Vec3 operations
+- [x] Integrate math library (forked zlm, added via submodule) for Mat4/Vec3 operations with Zig 0.12.1 compatibility fixes
+
+## Active Sprint
 
 ## Backlog
 
