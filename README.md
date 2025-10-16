@@ -12,7 +12,7 @@ Specific version requirements for build tools include:
 
 SDL2 is referenced via git submodule and built from source, but may require a minimum set of system-specific platform dependencies:
 
-* *LINUX*: `X11-devel`, `Xext-devel`, `Xcursor-devel`, `Xinerama-devel`, `Xi-devel`, `Xrandr-devel`, `XScrnSaver-devel`, `Xxf86vm-devel` (debian and arch packages may have slightly different names; when installed via system package manager, `lib` prefix will often be needed)
+* *LINUX*: `X11-devel`, `Xext-devel`, `Xcursor-devel`, `Xinerama-devel`, `Xi-devel`, `Xrandr-devel`, `XScrnSaver-devel`, `Xxf86vm-devel`, `mesa-libGL-devel`, `mesa-libGLU-devel` (debian and arch packages may have slightly different names; when installed via system package manager, `lib` prefix will often be needed)
 
 * *MACOS*: `xcode-select --all` can be used to install relevant development libraries
 

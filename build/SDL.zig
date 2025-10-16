@@ -61,6 +61,8 @@ pub fn linkSDL2(b: *std.Build, exe: *std.Build.Step.Compile, target: std.Build.R
             "-DSDL_STATIC=ON",
             "-DSDL_TEST=OFF",
             "-DSDL_VIDEO=ON",
+            "-DSDL_OPENGL=ON",
+            "-DSDL_VIDEO_OPENGL=ON",
         });
         break :blk cmake_configure;
     } else blk: {

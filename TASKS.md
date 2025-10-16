@@ -1,0 +1,123 @@
+# Project Tasks
+
+## Completed
+
+- [x] SDL2 build for zig linkage of library source from submodule (starting with 0.11.0)
+
+- [x] Basic SDL windowed application with blit drawing and event loop
+
+- [x] Rotating rectangle animation in basic SDL blit rendering
+
+- [x] Updated build.zig version check and path handling for 0.12.1
+
+- [x] Updated build/SDL.zig for ResolvedTarget and path changes for 0.12.1
+
+- [x] Fixed @fieldParentPtr signature for 0.12.1 compatibility
+
+- [x] Migrate to SDL + OpenGL ES context setup with proper attributes
+
+- [x] OpenGL function loading via manual SDL_GL_GetProcAddress
+
+- [x] Shader management system with compilation and error handling
+
+- [x] Runtime shader loading from files (resources.zig)
+
+- [x] Vertex shader with 2D rotation transform
+
+- [x] Fragment shader with interpolated rainbow colors
+
+- [x] Geometry setup with VAO/VBO and vertex attributes (renderer.zig)
+
+- [x] OpenGL render loop with glClear, glDrawArrays, and buffer swapping
+
+- [x] Time-based animation with angle uniform updates
+
+- [x] Resource cleanup and proper deinitialization
+
+- [x] Created multi-file module structure (resources, gl, shader, renderer) to break out logic from main module
+
+- [x] Organize shader source as runtime resources (`.v.glsl`, `.f.glsl` files)
+
+## Active Sprint
+
+- [ ] Integrate math library (zlm or similar) for Mat4/Vec3 operations
+
+## Backlog
+
+### Epic 1: 3D Foundation
+
+- [ ] Change triangle (and scene/camera) transforms (just rotations for now) from 2d into 3d
+
+- [ ] Add unit axes visualization for scene frame reference
+
+- [ ] Implement Camera model (position, target, up, FOV, projection matrices)
+
+- [ ] Add orbit camera controls from mouse input
+
+- [ ] Add in-module tests as features are built (gl, renderer, resources, shader)
+
+### Epic 2: Content & Scene Architecture
+
+- [ ] Research GLTF structure to inform scene graph design (do this BEFORE implementing scene graph)
+
+- [ ] Implement basic mesh loading (start with OBJ or simple format)
+
+- [ ] Create Material abstraction (shader program + uniforms)
+
+- [ ] Build initial scene data structure (list of renderables)
+
+- [ ] Extract scene into node tree with recursive rendering
+
+- [ ] Implement THREE-like scene graph (Entity → Geometry + Material)
+
+### Epic 3: Renderer Abstraction
+
+- [ ] Consolidate behind OpenGLRenderer interface (design with WebGPU migration in mind)
+
+- [ ] Add render target/canvas abstraction
+
+- [ ] Design command-buffer style API (prepares for WebGPU)
+
+### Epic 4: Asset Pipeline
+
+- [ ] Define resource pack format and runtime loading
+
+- [ ] Implement GLTF import/export
+
+- [ ] Verify Blender → GLTF → Ouroboros workflow
+
+- [ ] Add texture loading and sampling
+
+### Epic 5: Systems & Polish
+
+- [ ] Implement pub-sub event system for subsystem communication
+
+- [ ] Add audio system (SFX + music)
+
+- [ ] Research UI integration options (ImGui, custom, etc.)
+
+- [ ] Add profiling/debug visualization tools
+
+- [ ] Improve memory monitoring and leak detection
+
+### Epic 6: ECS Refactor
+
+- [ ] Separate static scene data from dynamic behavior
+
+- [ ] Prototype ECS for one subsystem (transform/movement)
+
+- [ ] Design component tables and system architecture
+
+- [ ] Migrate systems incrementally
+
+### Epic 7: Platform & Extensibility
+
+- [ ] Evaluate scripting options (Zig/Lua/WASM) based on use case
+
+- [ ] Add embedded console for runtime scripting
+
+- [ ] Research Steam SDK minimal integration (if commercial)
+
+- [ ] Consider physics integration (extend scene graph nodes)
+
+- [ ] Consider networking requirements
