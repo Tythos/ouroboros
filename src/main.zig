@@ -3,6 +3,7 @@ const gl = @import("gl.zig");
 const Renderer = @import("renderer.zig").Renderer;
 const AxesRenderer = @import("axes.zig").AxesRenderer;
 const Camera = @import("camera.zig").Camera;
+const OrbitController = @import("orbit_controller.zig").OrbitController;
 const sdl = @cImport({
     @cInclude("SDL2/SDL.h");
 });
@@ -80,8 +81,14 @@ pub fn main() !void {
         1e+3,                                     // Far plane
     );
 
+    // Initialize orbit controller from current camera position
+    var orbit_controller = OrbitController.initFromCamera(&camera);
+
     std.debug.print("OpenGL context created successfully\n", .{});
-    std.debug.print("Press ESC or close the window to quit\n", .{});
+    std.debug.print("Controls:\n", .{});
+    std.debug.print("  Left-click + drag: Rotate camera\n", .{});
+    std.debug.print("  Mouse wheel: Zoom in/out\n", .{});
+    std.debug.print("  ESC: Quit\n", .{});
 
     // Main event loop
     var running = true;
@@ -100,24 +107,38 @@ pub fn main() !void {
                 },
                 else => {},
             }
+            
+            // Pass event to orbit controller
+            orbit_controller.handleEvent(&event);
         }
+
+        // Update camera from orbit controller
+        orbit_controller.updateCamera(&camera);
 
         // Calculate animation time
         const current_time = sdl.SDL_GetTicks64();
         const elapsed_ms = current_time - start_time;
         const elapsed_seconds: f32 = @as(f32, @floatFromInt(elapsed_ms)) / 1000.0;
 
-        // Animate camera position: oscillate between +3 and +7 on X axis
-        const camera_oscillation_speed: f32 = 0.5; // Hz (cycles per second)
-        const camera_x = 5.0 + 2.0 * @sin(elapsed_seconds * camera_oscillation_speed * 2.0 * std.math.pi);
-        camera.setPosition(CameraModule.Vec3.new(camera_x, 0.0, 0.0));
-        camera.lookAt(CameraModule.Vec3.new(0.0, 0.0, 0.0));
-
-        // Compute model matrix: rotation around X-axis
-        const rotation_speed: f32 = 1.0; // radians per second
-        const angle: f32 = elapsed_seconds * rotation_speed;
+        // Compute model matrix: rotation around all three axes for tumbling effect
+        const x_rotation_speed: f32 = 1.0;   // radians per second
+        const y_rotation_speed: f32 = 1.5;   // slightly faster
+        const z_rotation_speed: f32 = 0.7;   // slower
+        
+        const angle_x: f32 = elapsed_seconds * x_rotation_speed;
+        const angle_y: f32 = elapsed_seconds * y_rotation_speed;
+        const angle_z: f32 = elapsed_seconds * z_rotation_speed;
+        
         const x_axis = CameraModule.Vec3.new(1.0, 0.0, 0.0);
-        const model_matrix = CameraModule.Mat4.createAngleAxis(x_axis, angle);
+        const y_axis = CameraModule.Vec3.new(0.0, 1.0, 0.0);
+        const z_axis = CameraModule.Vec3.new(0.0, 0.0, 1.0);
+        
+        const rotation_x = CameraModule.Mat4.createAngleAxis(x_axis, angle_x);
+        const rotation_y = CameraModule.Mat4.createAngleAxis(y_axis, angle_y);
+        const rotation_z = CameraModule.Mat4.createAngleAxis(z_axis, angle_z);
+        
+        // Combine rotations: apply Z, then Y, then X (order matters!)
+        const model_matrix = rotation_x.mul(rotation_y.mul(rotation_z));
 
         // Render the scene
         renderer.render(model_matrix, &camera);
