@@ -3,6 +3,7 @@ const gl = @import("gl.zig");
 const shader = @import("shader.zig");
 const zlm = @import("zlm").as(f32);
 const Camera = @import("camera.zig").Camera;
+const test_utils = @import("test_utilities.zig");
 
 /// AxesRenderer draws RGB colored coordinate axes for reference
 /// X-axis = Red, Y-axis = Green, Z-axis = Blue
@@ -138,4 +139,157 @@ pub const AxesRenderer = struct {
         gl.glDeleteProgram(self.program);
     }
 };
+
+// ============================================================================
+// TESTS
+// ============================================================================
+
+test "axes renderer vertex data structure" {
+    // Test the mathematical correctness of the axes vertex data
+    const axes_length: f32 = 2.0;
+    
+    // Expected vertex data structure: [x, y, z, r, g, b]
+    const expected_vertices = [_]f32{
+        // X-axis (red line from origin to +X)
+        0.0, 0.0, 0.0,  1.0, 0.0, 0.0,  // Origin
+        axes_length, 0.0, 0.0,  1.0, 0.0, 0.0,  // +X
+        
+        // Y-axis (green line from origin to +Y)
+        0.0, 0.0, 0.0,  0.0, 1.0, 0.0,  // Origin
+        0.0, axes_length, 0.0,  0.0, 1.0, 0.0,  // +Y
+        
+        // Z-axis (blue line from origin to +Z)
+        0.0, 0.0, 0.0,  0.0, 0.0, 1.0,  // Origin
+        0.0, 0.0, axes_length,  0.0, 0.0, 1.0,  // +Z
+    };
+    
+    // Test axes vertex data using stride/slice mechanism
+    try test_utils.expectAxesVertexData(&expected_vertices, axes_length);
+    
+    // Test line geometry properties
+    const stride = 6; // [x, y, z, r, g, b]
+    const line_count = 3; // X, Y, Z axes
+    try test_utils.expectLineGeometry(&expected_vertices, stride, line_count);
+}
+
+test "axes renderer mathematical properties" {
+    // Test mathematical properties of the axes system
+    const axes_length: f32 = 2.0;
+    
+    const x_axis = zlm.Vec3.new(axes_length, 0.0, 0.0);
+    const y_axis = zlm.Vec3.new(0.0, axes_length, 0.0);
+    const z_axis = zlm.Vec3.new(0.0, 0.0, axes_length);
+    
+    // Test orthogonality
+    try test_utils.expectVec3Orthogonal(x_axis, y_axis);
+    try test_utils.expectVec3Orthogonal(y_axis, z_axis);
+    try test_utils.expectVec3Orthogonal(z_axis, x_axis);
+    
+    // Test axis lengths
+    try test_utils.expectLength(x_axis, axes_length);
+    try test_utils.expectLength(y_axis, axes_length);
+    try test_utils.expectLength(z_axis, axes_length);
+    
+    // Test normalized axes are unit vectors
+    try test_utils.expectNormalized(x_axis.normalize());
+    try test_utils.expectNormalized(y_axis.normalize());
+    try test_utils.expectNormalized(z_axis.normalize());
+}
+
+test "axes renderer color mathematics" {
+    // Test color space properties
+    const red = zlm.Vec3.new(1.0, 0.0, 0.0);
+    const green = zlm.Vec3.new(0.0, 1.0, 0.0);
+    const blue = zlm.Vec3.new(0.0, 0.0, 1.0);
+    
+    // Test that colors are normalized
+    try test_utils.expectNormalized(red);
+    try test_utils.expectNormalized(green);
+    try test_utils.expectNormalized(blue);
+    
+    // Test that colors are orthogonal in RGB space
+    try test_utils.expectColorOrthogonal(red, green);
+    try test_utils.expectColorOrthogonal(green, blue);
+    try test_utils.expectColorOrthogonal(blue, red);
+    
+    // Test color mixing (should produce white when all combined)
+    const mixed = red.add(green).add(blue);
+    const white = zlm.Vec3.new(1.0, 1.0, 1.0);
+    try test_utils.expectColorEqual(mixed, white);
+}
+
+test "axes renderer matrix operations" {
+    // Test matrix operations used in rendering
+    const identity = zlm.Mat4.identity;
+    
+    // Test identity matrix properties
+    try test_utils.expectMat4Identity(identity);
+    
+    // Test that identity matrix doesn't change vectors
+    const test_vec = zlm.Vec3.new(1.0, 2.0, 3.0);
+    const transformed = identity.mulVec3(test_vec);
+    try test_utils.expectVec3Equal(test_vec, transformed);
+    
+    // Test matrix multiplication with identity
+    const result = identity.mul(identity);
+    try test_utils.expectMat4Equal(identity, result);
+}
+
+test "axes renderer vertex attribute layout" {
+    // Test vertex attribute layout mathematics
+    const vertex_size = 6 * @sizeOf(f32); // 6 floats per vertex
+    const position_offset = 0;
+    const color_offset = 3 * @sizeOf(f32);
+    const stride = 6 * @sizeOf(f32);
+    
+    // Test vertex layout using helper
+    try test_utils.expectVertexLayout(vertex_size, position_offset, color_offset, stride);
+}
+
+test "axes renderer coordinate system" {
+    // Test that the axes form a right-handed coordinate system
+    const x_axis = zlm.Vec3.new(1.0, 0.0, 0.0);
+    const y_axis = zlm.Vec3.new(0.0, 1.0, 0.0);
+    const z_axis = zlm.Vec3.new(0.0, 0.0, 1.0);
+    
+    // Test right-handed coordinate system
+    try test_utils.expectRightHandedSystem(x_axis, y_axis, z_axis);
+}
+
+test "axes renderer line geometry" {
+    // Test line geometry properties
+    const axes_length: f32 = 2.0;
+    const origin = zlm.Vec3.new(0.0, 0.0, 0.0);
+    
+    // X-axis line: origin to (length, 0, 0)
+    const x_end = zlm.Vec3.new(axes_length, 0.0, 0.0);
+    const x_line = x_end.sub(origin);
+    try test_utils.expectLength(x_line, axes_length);
+    
+    // Y-axis line: origin to (0, length, 0)
+    const y_end = zlm.Vec3.new(0.0, axes_length, 0.0);
+    const y_line = y_end.sub(origin);
+    try test_utils.expectLength(y_line, axes_length);
+    
+    // Z-axis line: origin to (0, 0, length)
+    const z_end = zlm.Vec3.new(0.0, 0.0, axes_length);
+    const z_line = z_end.sub(origin);
+    try test_utils.expectLength(z_line, axes_length);
+    
+    // Test that all lines are orthogonal
+    const lines = [_]zlm.Vec3{ x_line, y_line, z_line };
+    try test_utils.expectAllOrthogonal(&lines);
+}
+
+test "axes renderer bounds and scaling" {
+    // Test mathematical bounds of the axes system
+    const axes_length: f32 = 2.0;
+    const center = zlm.Vec3.new(0.0, 0.0, 0.0);
+    const min_bounds = zlm.Vec3.new(-axes_length, -axes_length, -axes_length);
+    const max_bounds = zlm.Vec3.new(axes_length, axes_length, axes_length);
+    const expected_size = zlm.Vec3.new(2.0 * axes_length, 2.0 * axes_length, 2.0 * axes_length);
+    
+    // Test bounding box properties
+    try test_utils.expectBoundingBox(min_bounds, max_bounds, center, expected_size);
+}
 

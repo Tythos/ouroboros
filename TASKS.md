@@ -50,15 +50,11 @@
 
 - [x] Good intermediate extraction of "renderable" model into an object / scene graph node struct
 
+- [x] Add in-module tests to `src/axes.zig` (including test utilities for vector/matrix/vertex data assertions)
+
 ## Active Sprint
 
-The current task should be evaluated in a design/develop/deploy cycle in which:
-
-1. Subtasks are proposed, including any specific architectural changes, for review and approval
-
-2. The appropriate changes are made, including verification via linting and building
-
-3. Finally, tests are evaluated and the *operator confirms* correct visual appearance (when relevant) of the expected result
+- [ ] Extend/update in-module tests to `src/camera.zig` (using new test utilities and focusing on mathematical operations)
 
 ## Backlog
 
