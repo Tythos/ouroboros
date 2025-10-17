@@ -42,19 +42,27 @@
 
 - [x] Integrate math library (forked zlm, added via submodule) for Mat4/Vec3 operations with Zig 0.12.1 compatibility fixes
 
-- [x] Change triangle (and scene/camera) transforms (just rotations for now) from 2d into 3d
+- [x] Change triangle (and scene/camera) transforms (just rotations for now) from 2d into 3d; this should include evolution of matrix derivation and stack management along the lines of a traditional model/view/projecttion, including camera modeling and properties (fov angular dimensions, near/far clipping, etc.)
 
-- [x] Add unit axes visualization for scene frame reference
+- [x] Add unit axes visualization for scene frame reference (x=red, y=green, z=blue)
+
+- [x] Add orbit camera controls from mouse input
+
+- [x] Good intermediate extraction of "renderable" model into an object / scene graph node struct
 
 ## Active Sprint
+
+The current task should be evaluated in a design/develop/deploy cycle in which:
+
+1. Subtasks are proposed, including any specific architectural changes, for review and approval
+
+2. The appropriate changes are made, including verification via linting and building
+
+3. Finally, tests are evaluated and the *operator confirms* correct visual appearance (when relevant) of the expected result
 
 ## Backlog
 
 ### Epic 1: 3D Foundation
-
-- [ ] Implement Camera model (position, target, up, FOV, projection matrices)
-
-- [ ] Add orbit camera controls from mouse input
 
 - [ ] Add in-module tests as features are built (gl, renderer, resources, shader)
 
