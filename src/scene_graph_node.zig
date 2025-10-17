@@ -179,3 +179,136 @@ pub const SceneGraphNode = struct {
     }
 };
 
+// ============================================================================
+// Tests
+// ============================================================================
+
+const test_utils = @import("test_utilities.zig");
+
+test "SceneGraphNode transform management" {
+    // Create a mock node for testing (without OpenGL initialization)
+    var node = SceneGraphNode{
+        .transform = zlm.Mat4.identity,
+        .elapsed_time = 0.0,
+        .x_rotation_speed = 1.0,
+        .y_rotation_speed = 1.5,
+        .z_rotation_speed = 0.7,
+        .program = 0,
+        .vao = 0,
+        .vbo = 0,
+        .model_location = 0,
+        .view_location = 0,
+        .projection_location = 0,
+        .vertex_count = 0,
+    };
+    
+    // Test initial state
+    try test_utils.expectMat4IdentityDefault(node.getTransform());
+    
+    // Test transform setting
+    const translation = zlm.Mat4.createTranslation(zlm.Vec3.new(1.0, 2.0, 3.0));
+    node.setTransform(translation);
+    try test_utils.expectMat4EqualDefault(node.getTransform(), translation);
+}
+
+test "SceneGraphNode animation timing" {
+    var node = SceneGraphNode{
+        .transform = zlm.Mat4.identity,
+        .elapsed_time = 0.0,
+        .x_rotation_speed = 2.0,
+        .y_rotation_speed = 1.0,
+        .z_rotation_speed = 0.5,
+        .program = 0,
+        .vao = 0,
+        .vbo = 0,
+        .model_location = 0,
+        .view_location = 0,
+        .projection_location = 0,
+        .vertex_count = 0,
+    };
+    
+    // Test time accumulation
+    node.update(0.5);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), node.elapsed_time, 1e-6);
+    
+    node.update(1.0);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.5), node.elapsed_time, 1e-6);
+    
+    // Test zero delta time
+    node.update(0.0);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.5), node.elapsed_time, 1e-6);
+}
+
+test "SceneGraphNode rotation mathematics" {
+    var node = SceneGraphNode{
+        .transform = zlm.Mat4.identity,
+        .elapsed_time = 0.0,
+        .x_rotation_speed = 1.0,
+        .y_rotation_speed = 1.0,
+        .z_rotation_speed = 1.0,
+        .program = 0,
+        .vao = 0,
+        .vbo = 0,
+        .model_location = 0,
+        .view_location = 0,
+        .projection_location = 0,
+        .vertex_count = 0,
+    };
+    
+    // Test rotation calculation at known time
+    const test_time = std.math.pi / 4.0; // 45 degrees
+    node.elapsed_time = test_time;
+    node.update(0.0); // Don't advance time, just recalculate
+    
+    // Verify individual rotation components
+    const expected_angle = test_time; // 45 degrees for all axes
+    const x_axis = zlm.Vec3.new(1.0, 0.0, 0.0);
+    const y_axis = zlm.Vec3.new(0.0, 1.0, 0.0);
+    const z_axis = zlm.Vec3.new(0.0, 0.0, 1.0);
+    
+    const expected_rot_x = zlm.Mat4.createAngleAxis(x_axis, expected_angle);
+    const expected_rot_y = zlm.Mat4.createAngleAxis(y_axis, expected_angle);
+    const expected_rot_z = zlm.Mat4.createAngleAxis(z_axis, expected_angle);
+    
+    // Test rotation order: Z, then Y, then X
+    const expected_combined = expected_rot_x.mul(expected_rot_y.mul(expected_rot_z));
+    try test_utils.expectMat4EqualDefault(node.transform, expected_combined);
+}
+
+test "SceneGraphNode different rotation speeds" {
+    var node = SceneGraphNode{
+        .transform = zlm.Mat4.identity,
+        .elapsed_time = 0.0,
+        .x_rotation_speed = 2.0,
+        .y_rotation_speed = 1.0,
+        .z_rotation_speed = 0.5,
+        .program = 0,
+        .vao = 0,
+        .vbo = 0,
+        .model_location = 0,
+        .view_location = 0,
+        .projection_location = 0,
+        .vertex_count = 0,
+    };
+    
+    const test_time = 1.0; // 1 second
+    node.elapsed_time = test_time;
+    node.update(0.0);
+    
+    // Verify different angles for each axis
+    const angle_x = test_time * node.x_rotation_speed; // 2.0 radians
+    const angle_y = test_time * node.y_rotation_speed; // 1.0 radians  
+    const angle_z = test_time * node.z_rotation_speed; // 0.5 radians
+    
+    const x_axis = zlm.Vec3.new(1.0, 0.0, 0.0);
+    const y_axis = zlm.Vec3.new(0.0, 1.0, 0.0);
+    const z_axis = zlm.Vec3.new(0.0, 0.0, 1.0);
+    
+    const expected_rot_x = zlm.Mat4.createAngleAxis(x_axis, angle_x);
+    const expected_rot_y = zlm.Mat4.createAngleAxis(y_axis, angle_y);
+    const expected_rot_z = zlm.Mat4.createAngleAxis(z_axis, angle_z);
+    
+    const expected_combined = expected_rot_x.mul(expected_rot_y.mul(expected_rot_z));
+    try test_utils.expectMat4EqualDefault(node.transform, expected_combined);
+}
+

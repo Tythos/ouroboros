@@ -60,9 +60,13 @@
 
 - [x] Add in-module tests to `src/resources.zig`
 
+- [x] Add in-module tests to `src/scene_graph_node.zig`
+
+- [x] Add in-module tests to `src/shader.zig`
+
 ## Active Sprint
 
-- [ ] Add in-module tests to `src/scene_graph_node.zig`
+- [ ] Add in-module tests to `src/test_utilities.zig`
 
 ## Backlog
 
