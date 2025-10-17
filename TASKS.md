@@ -42,15 +42,15 @@
 
 - [x] Integrate math library (forked zlm, added via submodule) for Mat4/Vec3 operations with Zig 0.12.1 compatibility fixes
 
+- [x] Change triangle (and scene/camera) transforms (just rotations for now) from 2d into 3d
+
 ## Active Sprint
+
+- [ ] Add unit axes visualization for scene frame reference
 
 ## Backlog
 
 ### Epic 1: 3D Foundation
-
-- [ ] Change triangle (and scene/camera) transforms (just rotations for now) from 2d into 3d
-
-- [ ] Add unit axes visualization for scene frame reference
 
 - [ ] Implement Camera model (position, target, up, FOV, projection matrices)
 

@@ -34,6 +34,9 @@ pub const GL_STATIC_DRAW: GLenum = 0x88E4;
 pub const GL_FLOAT: GLenum = 0x1406;
 pub const GL_TRIANGLES: GLenum = 0x0004;
 
+// Depth testing constants
+pub const GL_DEPTH_TEST: GLenum = 0x0B71;
+
 // OpenGL function pointers
 pub var glCreateShader: *const fn (GLenum) callconv(.C) GLuint = undefined;
 pub var glShaderSource: *const fn (GLuint, GLsizei, [*c]const [*c]const GLchar, [*c]const GLint) callconv(.C) void = undefined;
@@ -70,6 +73,7 @@ pub var glClear: *const fn (GLbitfield) callconv(.C) void = undefined;
 pub var glDrawArrays: *const fn (GLenum, GLint, GLsizei) callconv(.C) void = undefined;
 
 pub var glViewport: *const fn (GLint, GLint, GLsizei, GLsizei) callconv(.C) void = undefined;
+pub var glEnable: *const fn (GLenum) callconv(.C) void = undefined;
 
 /// Load an OpenGL function pointer using SDL
 fn loadFunction(comptime T: type, name: [*:0]const u8) T {
@@ -120,6 +124,7 @@ pub fn loadFunctions() void {
     glDrawArrays = loadFunction(@TypeOf(glDrawArrays), "glDrawArrays");
     
     glViewport = loadFunction(@TypeOf(glViewport), "glViewport");
+    glEnable = loadFunction(@TypeOf(glEnable), "glEnable");
     
     std.debug.print("OpenGL functions loaded successfully\n", .{});
 }

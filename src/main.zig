@@ -29,8 +29,8 @@ pub fn main() !void {
         "Ouroboros - OpenGL Triangle",
         sdl.SDL_WINDOWPOS_CENTERED,
         sdl.SDL_WINDOWPOS_CENTERED,
-        800,
-        600,
+        1600,
+        900,
         sdl.SDL_WINDOW_OPENGL | sdl.SDL_WINDOW_SHOWN,
     ) orelse {
         std.debug.print("SDL_CreateWindow Error: {s}\n", .{sdl.SDL_GetError()});
@@ -51,6 +51,9 @@ pub fn main() !void {
 
     // Load OpenGL functions
     gl.loadFunctions();
+
+    // Enable depth testing for 3D rendering
+    gl.glEnable(gl.GL_DEPTH_TEST);
 
     // Set viewport
     var window_w: i32 = 0;

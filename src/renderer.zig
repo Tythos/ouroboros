@@ -26,15 +26,15 @@ pub const Renderer = struct {
             std.debug.print("Warning: 'transform' uniform not found in shader\n", .{});
         }
         
-        // Define triangle vertices with rainbow colors
+        // Define triangle vertices with rainbow colors in 3D space
         // Each vertex: [x, y, z, r, g, b]
         const vertices = [_]f32{
             // Position       // Color (red)
              0.0,  0.5, 0.0,  1.0, 0.0, 0.0,
             // Position       // Color (green)
-            -0.5, -0.5, 0.0,  0.0, 1.0, 0.0,
+            -0.5, -0.5, 0.2,  0.0, 1.0, 0.0,
             // Position       // Color (blue)
-             0.5, -0.5, 0.0,  0.0, 0.0, 1.0,
+             0.5, -0.5, -0.2, 0.0, 0.0, 1.0,
         };
         
         // Create and bind VAO
@@ -98,15 +98,30 @@ pub const Renderer = struct {
         // Use our shader program
         gl.glUseProgram(self.program);
         
-        // Create a rotation matrix around the Z axis using zlm
+        // Create 3D rotation matrices around different axes
+        // Rotate around X axis (pitch)
+        const x_axis = zlm.Vec3.new(1, 0, 0);
+        const pitch_angle = angle * 0.5; // Slower rotation around X
+        const pitch_matrix = zlm.Mat4.createAngleAxis(x_axis, pitch_angle);
+        
+        // Rotate around Y axis (yaw)  
+        const y_axis = zlm.Vec3.new(0, 1, 0);
+        const yaw_angle = angle * 0.7; // Different speed for Y
+        const yaw_matrix = zlm.Mat4.createAngleAxis(y_axis, yaw_angle);
+        
+        // Rotate around Z axis (roll)
         const z_axis = zlm.Vec3.new(0, 0, 1);
-        const rotation_matrix = zlm.Mat4.createAngleAxis(z_axis, angle);
+        const roll_angle = angle; // Full speed for Z
+        const roll_matrix = zlm.Mat4.createAngleAxis(z_axis, roll_angle);
+        
+        // Combine rotations: Z * Y * X (applied in reverse order)
+        const combined_rotation = roll_matrix.mul(yaw_matrix).mul(pitch_matrix);
         
         // Set the transform uniform (mat4)
         if (self.transform_location != -1) {
             // OpenGL expects column-major matrices, but zlm stores row-major
             // We need to transpose before passing to OpenGL
-            const transposed = rotation_matrix.transpose();
+            const transposed = combined_rotation.transpose();
             gl.glUniformMatrix4fv(self.transform_location, 1, gl.GL_FALSE, @ptrCast(&transposed.fields));
         }
         
