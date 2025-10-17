@@ -66,7 +66,11 @@
 
 - [x] Add in-module tests to `src/test_utilities.zig`
 
+- [x] Extract geometry property of scene graph node into its own model, including vertex buffer data; structure; indices; and relevant interfaces
+
 ## Active Sprint
+
+- [ ] Extract material properties of scene graph node into a new model, including shaders, programs, loading/unloading, and bindings behaviors
 
 ## Backlog
 

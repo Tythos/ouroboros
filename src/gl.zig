@@ -44,6 +44,8 @@ pub const GL_STATIC_DRAW: GLenum = 0x88E4;
 pub const GL_FLOAT: GLenum = 0x1406;
 pub const GL_TRIANGLES: GLenum = 0x0004;
 pub const GL_LINES: GLenum = 0x0001;
+pub const GL_UNSIGNED_INT: GLenum = 0x1405;
+pub const GL_ELEMENT_ARRAY_BUFFER: GLenum = 0x8893;
 
 // OpenGL function pointers
 pub var glCreateShader: *const fn (GLenum) callconv(.C) GLuint = undefined;
@@ -79,6 +81,7 @@ pub var glEnableVertexAttribArray: *const fn (GLuint) callconv(.C) void = undefi
 pub var glClearColor: *const fn (GLfloat, GLfloat, GLfloat, GLfloat) callconv(.C) void = undefined;
 pub var glClear: *const fn (GLbitfield) callconv(.C) void = undefined;
 pub var glDrawArrays: *const fn (GLenum, GLint, GLsizei) callconv(.C) void = undefined;
+pub var glDrawElements: *const fn (GLenum, GLsizei, GLenum, ?*const anyopaque) callconv(.C) void = undefined;
 
 pub var glViewport: *const fn (GLint, GLint, GLsizei, GLsizei) callconv(.C) void = undefined;
 pub var glEnable: *const fn (GLenum) callconv(.C) void = undefined;
@@ -132,6 +135,7 @@ pub fn loadFunctions() void {
     glClearColor = loadFunction(@TypeOf(glClearColor), "glClearColor");
     glClear = loadFunction(@TypeOf(glClear), "glClear");
     glDrawArrays = loadFunction(@TypeOf(glDrawArrays), "glDrawArrays");
+    glDrawElements = loadFunction(@TypeOf(glDrawElements), "glDrawElements");
     
     glViewport = loadFunction(@TypeOf(glViewport), "glViewport");
     glEnable = loadFunction(@TypeOf(glEnable), "glEnable");

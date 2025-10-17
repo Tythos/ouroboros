@@ -5,6 +5,7 @@ const AxesRenderer = @import("axes.zig").AxesRenderer;
 const Camera = @import("camera.zig").Camera;
 const OrbitController = @import("orbit_controller.zig").OrbitController;
 const SceneGraphNode = @import("scene_graph_node.zig").SceneGraphNode;
+const Geometry = @import("geometry.zig").Geometry;
 const sdl = @cImport({
     @cInclude("SDL2/SDL.h");
 });
@@ -88,8 +89,12 @@ pub fn main() !void {
     // Initialize orbit controller from current camera position
     var orbit_controller = OrbitController.initFromCamera(&camera);
 
-    // Create scene graph node for the triangle (owns geometry and shader)
-    var triangle_node = try SceneGraphNode.init(allocator);
+    // Create triangle geometry
+    var triangle_geometry = try Geometry.initTriangle();
+    defer triangle_geometry.deinit();
+    
+    // Create scene graph node for the triangle (references geometry and owns shader)
+    var triangle_node = try SceneGraphNode.init(allocator, &triangle_geometry);
     defer triangle_node.deinit();
 
     std.debug.print("OpenGL context created successfully\n", .{});
