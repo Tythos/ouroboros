@@ -29,3 +29,45 @@ pub fn loadShaderSource(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
     return loadFile(allocator, path);
 }
 
+// Tests
+test "loadFile with existing shader file" {
+    const allocator = std.testing.allocator;
+    const content = try loadFile(allocator, "resources/shaders/triangle.v.glsl");
+    defer allocator.free(content);
+    
+    try std.testing.expect(content.len > 0);
+    try std.testing.expect(std.mem.indexOf(u8, content, "main") != null);
+}
+
+test "loadFile with non-existent file" {
+    const allocator = std.testing.allocator;
+    try std.testing.expectError(error.FileNotFound, loadFile(allocator, "nonexistent.xyz"));
+}
+
+test "loadShaderSource with existing shader" {
+    const allocator = std.testing.allocator;
+    const content = try loadShaderSource(allocator, "resources/shaders/triangle.f.glsl");
+    defer allocator.free(content);
+    
+    try std.testing.expect(content.len > 0);
+    try std.testing.expect(std.mem.indexOf(u8, content, "void main") != null);
+}
+
+test "loadShaderSource with non-existent shader" {
+    const allocator = std.testing.allocator;
+    try std.testing.expectError(error.FileNotFound, loadShaderSource(allocator, "missing.f.glsl"));
+}
+
+test "loadFile memory management" {
+    const allocator = std.testing.allocator;
+    var content = try loadFile(allocator, "resources/shaders/triangle.v.glsl");
+    
+    try std.testing.expect(content.len > 0);
+    allocator.free(content);
+    
+    // Test that we can allocate again after freeing
+    content = try loadFile(allocator, "resources/shaders/triangle.f.glsl");
+    try std.testing.expect(content.len > 0);
+    allocator.free(content);
+}
+

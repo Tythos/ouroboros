@@ -58,7 +58,11 @@
 
 - [x] Add in-module tests to `src/renderer.zig` (using new test utilities)
 
+- [x] Add in-module tests to `src/resources.zig`
+
 ## Active Sprint
+
+- [ ] Add in-module tests to `src/scene_graph_node.zig`
 
 ## Backlog
 
