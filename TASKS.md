@@ -54,15 +54,13 @@
 
 - [x] Extend/update in-module tests to `src/camera.zig` (using new test utilities and focusing on mathematical operations)
 
+- [x] Add in-module tests to `src/gl.zig` (using new test utilities)
+
+- [x] Add in-module tests to `src/renderer.zig` (using new test utilities)
+
 ## Active Sprint
 
-- [ ] Add in-module tests to `src/gl.zig` (using new test utilities)
-
 ## Backlog
-
-### Epic 1: 3D Foundation
-
-- [ ] Add in-module tests as features are built (gl, renderer, resources, shader)
 
 ### Epic 2: Content & Scene Architecture
 
