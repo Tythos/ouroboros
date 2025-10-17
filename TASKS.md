@@ -44,9 +44,9 @@
 
 - [x] Change triangle (and scene/camera) transforms (just rotations for now) from 2d into 3d
 
-## Active Sprint
+- [x] Add unit axes visualization for scene frame reference
 
-- [ ] Add unit axes visualization for scene frame reference
+## Active Sprint
 
 ## Backlog
 

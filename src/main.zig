@@ -1,6 +1,7 @@
 const std = @import("std");
 const gl = @import("gl.zig");
 const Renderer = @import("renderer.zig").Renderer;
+const Camera = @import("camera.zig").Camera;
 const sdl = @cImport({
     @cInclude("SDL2/SDL.h");
 });
@@ -65,6 +66,12 @@ pub fn main() !void {
     const renderer = try Renderer.init(allocator);
     defer renderer.deinit();
 
+    // Initialize camera at (1, 2, 3) looking at origin
+    var cam = Camera.default();
+    
+    // Set correct aspect ratio based on actual window dimensions
+    cam.setAspectRatio(@as(f32, @floatFromInt(window_w)), @as(f32, @floatFromInt(window_h)));
+    
     std.debug.print("OpenGL context created successfully\n", .{});
     std.debug.print("Press ESC or close the window to quit\n", .{});
 
@@ -94,8 +101,8 @@ pub fn main() !void {
         const rotation_speed: f32 = 1.0; // radians per second
         const angle: f32 = elapsed_seconds * rotation_speed;
 
-        // Render the scene
-        renderer.render(angle);
+        // Render the scene with camera
+        renderer.render(angle, cam);
 
         // Swap buffers
         sdl.SDL_GL_SwapWindow(window);
