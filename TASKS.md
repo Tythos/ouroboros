@@ -48,6 +48,8 @@
 
 - [x] Add orbit camera controls from mouse input
 
+- [x] Good intermediate extraction of "renderable" model into an object / scene graph node struct
+
 ## Active Sprint
 
 The current task should be evaluated in a design/develop/deploy cycle in which:
@@ -56,13 +58,11 @@ The current task should be evaluated in a design/develop/deploy cycle in which:
 
 2. The appropriate changes are made, including verification via linting and building
 
-3. Finally, tests are evaluated and the operator confirms correct visual appearance (when relevant) of the expected result
+3. Finally, tests are evaluated and the *operator confirms* correct visual appearance (when relevant) of the expected result
 
 ## Backlog
 
 ### Epic 1: 3D Foundation
-
-- [ ] Good intermediate extraction of "renderable" model into an object / scene graph node struct
 
 - [ ] Add in-module tests as features are built (gl, renderer, resources, shader)
 

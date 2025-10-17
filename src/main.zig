@@ -1,9 +1,10 @@
 const std = @import("std");
 const gl = @import("gl.zig");
-const Renderer = @import("renderer.zig").Renderer;
+const renderer_utils = @import("renderer.zig");
 const AxesRenderer = @import("axes.zig").AxesRenderer;
 const Camera = @import("camera.zig").Camera;
 const OrbitController = @import("orbit_controller.zig").OrbitController;
+const SceneGraphNode = @import("scene_graph_node.zig").SceneGraphNode;
 const sdl = @cImport({
     @cInclude("SDL2/SDL.h");
 });
@@ -61,10 +62,10 @@ pub fn main() !void {
     sdl.SDL_GetWindowSize(window, &window_w, &window_h);
     gl.glViewport(0, 0, window_w, window_h);
 
-    // Initialize renderers
-    const renderer = try Renderer.init(allocator);
-    defer renderer.deinit();
-    
+    // Setup common rendering state (depth testing, etc.)
+    renderer_utils.setupRenderState();
+
+    // Initialize axes renderer (still using old approach for debugging)
     const axes_renderer = try AxesRenderer.init(allocator);
     defer axes_renderer.deinit();
 
@@ -84,6 +85,10 @@ pub fn main() !void {
     // Initialize orbit controller from current camera position
     var orbit_controller = OrbitController.initFromCamera(&camera);
 
+    // Create scene graph node for the triangle (owns geometry and shader)
+    var triangle_node = try SceneGraphNode.init(allocator);
+    defer triangle_node.deinit();
+
     std.debug.print("OpenGL context created successfully\n", .{});
     std.debug.print("Controls:\n", .{});
     std.debug.print("  Left-click + drag: Rotate camera\n", .{});
@@ -92,7 +97,7 @@ pub fn main() !void {
 
     // Main event loop
     var running = true;
-    const start_time = sdl.SDL_GetTicks64();
+    var last_time = sdl.SDL_GetTicks64();
     
     while (running) {
         // Handle events
@@ -115,33 +120,20 @@ pub fn main() !void {
         // Update camera from orbit controller
         orbit_controller.updateCamera(&camera);
 
-        // Calculate animation time
+        // Calculate delta time
         const current_time = sdl.SDL_GetTicks64();
-        const elapsed_ms = current_time - start_time;
-        const elapsed_seconds: f32 = @as(f32, @floatFromInt(elapsed_ms)) / 1000.0;
+        const delta_ms = current_time - last_time;
+        const delta_time: f32 = @as(f32, @floatFromInt(delta_ms)) / 1000.0;
+        last_time = current_time;
+        
+        // Update scene graph node animation
+        triangle_node.update(delta_time);
 
-        // Compute model matrix: rotation around all three axes for tumbling effect
-        const x_rotation_speed: f32 = 1.0;   // radians per second
-        const y_rotation_speed: f32 = 1.5;   // slightly faster
-        const z_rotation_speed: f32 = 0.7;   // slower
-        
-        const angle_x: f32 = elapsed_seconds * x_rotation_speed;
-        const angle_y: f32 = elapsed_seconds * y_rotation_speed;
-        const angle_z: f32 = elapsed_seconds * z_rotation_speed;
-        
-        const x_axis = CameraModule.Vec3.new(1.0, 0.0, 0.0);
-        const y_axis = CameraModule.Vec3.new(0.0, 1.0, 0.0);
-        const z_axis = CameraModule.Vec3.new(0.0, 0.0, 1.0);
-        
-        const rotation_x = CameraModule.Mat4.createAngleAxis(x_axis, angle_x);
-        const rotation_y = CameraModule.Mat4.createAngleAxis(y_axis, angle_y);
-        const rotation_z = CameraModule.Mat4.createAngleAxis(z_axis, angle_z);
-        
-        // Combine rotations: apply Z, then Y, then X (order matters!)
-        const model_matrix = rotation_x.mul(rotation_y.mul(rotation_z));
+        // Clear the screen (dark blue background)
+        renderer_utils.clearScreen(0.1, 0.1, 0.2, 1.0);
 
         // Render the scene
-        renderer.render(model_matrix, &camera);
+        triangle_node.render(&camera);
         
         // Render coordinate axes for reference
         axes_renderer.render(&camera);
