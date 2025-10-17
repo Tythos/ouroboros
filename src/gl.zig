@@ -150,3 +150,60 @@ pub fn checkError(context: []const u8) void {
         std.debug.print("OpenGL Error in {s}: 0x{X}\n", .{ context, err });
     }
 }
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+const test_utils = @import("test_utilities.zig");
+
+test "OpenGL type sizes" {
+    // Verify critical type sizes for OpenGL bindings
+    try std.testing.expectEqual(@as(usize, 4), @sizeOf(GLuint));
+    try std.testing.expectEqual(@as(usize, 4), @sizeOf(GLint));
+    try std.testing.expectEqual(@as(usize, 4), @sizeOf(GLfloat));
+    try std.testing.expectEqual(@as(usize, 1), @sizeOf(GLboolean));
+    try std.testing.expectEqual(@as(usize, 4), @sizeOf(GLenum));
+}
+
+test "OpenGL error constants" {
+    // Verify error codes have expected values
+    try std.testing.expectEqual(@as(GLenum, 0), GL_NO_ERROR);
+    try std.testing.expectEqual(@as(GLenum, 0x0500), GL_INVALID_ENUM);
+    try std.testing.expectEqual(@as(GLenum, 0x0501), GL_INVALID_VALUE);
+    try std.testing.expectEqual(@as(GLenum, 0x0502), GL_INVALID_OPERATION);
+    try std.testing.expectEqual(@as(GLenum, 0x0505), GL_OUT_OF_MEMORY);
+}
+
+test "OpenGL boolean constants" {
+    try std.testing.expectEqual(@as(GLboolean, 0), GL_FALSE);
+    try std.testing.expectEqual(@as(GLboolean, 1), GL_TRUE);
+}
+
+test "checkError function signature" {
+    // Test that checkError function exists and has correct signature
+    const check_error_type = @TypeOf(checkError);
+    
+    // Verify checkError takes one parameter (context string)
+    try std.testing.expectEqual(@as(usize, 1), @typeInfo(check_error_type).Fn.params.len);
+}
+
+test "loadFunction signature validation" {
+    // Test that loadFunction has correct signature and can be called
+    // We can't easily test the panic path without complex mocking,
+    // so we just verify the function exists and has the right type
+    const load_func_type = @TypeOf(loadFunction);
+    
+    // Verify loadFunction takes the expected parameters
+    try std.testing.expectEqual(@as(usize, 2), @typeInfo(load_func_type).Fn.params.len);
+}
+
+test "OpenGL shader type constants" {
+    try std.testing.expectEqual(@as(GLenum, 0x8B31), GL_VERTEX_SHADER);
+    try std.testing.expectEqual(@as(GLenum, 0x8B30), GL_FRAGMENT_SHADER);
+}
+
+test "OpenGL buffer constants" {
+    try std.testing.expectEqual(@as(GLenum, 0x8892), GL_ARRAY_BUFFER);
+    try std.testing.expectEqual(@as(GLenum, 0x88E4), GL_STATIC_DRAW);
+}

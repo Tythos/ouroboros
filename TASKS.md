@@ -52,9 +52,11 @@
 
 - [x] Add in-module tests to `src/axes.zig` (including test utilities for vector/matrix/vertex data assertions)
 
+- [x] Extend/update in-module tests to `src/camera.zig` (using new test utilities and focusing on mathematical operations)
+
 ## Active Sprint
 
-- [ ] Extend/update in-module tests to `src/camera.zig` (using new test utilities and focusing on mathematical operations)
+- [ ] Add in-module tests to `src/gl.zig` (using new test utilities)
 
 ## Backlog
 
