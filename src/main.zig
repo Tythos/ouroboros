@@ -1,4 +1,5 @@
 const std = @import("std");
+const zlm = @import("zlm").as(f32);
 const gl = @import("gl.zig");
 const renderer_utils = @import("renderer.zig");
 const AxesRenderer = @import("axes.zig").AxesRenderer;
@@ -6,6 +7,7 @@ const Camera = @import("camera.zig").Camera;
 const OrbitController = @import("orbit_controller.zig").OrbitController;
 const SceneGraphNode = @import("scene_graph_node.zig").SceneGraphNode;
 const Geometry = @import("geometry.zig").Geometry;
+const Material = @import("material.zig").Material;
 const sdl = @cImport({
     @cInclude("SDL2/SDL.h");
 });
@@ -89,13 +91,48 @@ pub fn main() !void {
     // Initialize orbit controller from current camera position
     var orbit_controller = OrbitController.initFromCamera(&camera);
 
-    // Create triangle geometry
-    var triangle_geometry = try Geometry.initTriangle();
-    defer triangle_geometry.deinit();
+    // Create cube geometry (shared between parent and child)
+    var cube_geometry = try Geometry.initCube();
+    defer cube_geometry.deinit();
     
-    // Create scene graph node for the triangle (references geometry and owns shader)
-    var triangle_node = try SceneGraphNode.init(allocator, &triangle_geometry);
-    defer triangle_node.deinit();
+    // Create materials for the cubes (same shader, but different instances)
+    var parent_material = try Material.init(allocator, "resources/shaders/triangle.v.glsl", "resources/shaders/triangle.f.glsl");
+    defer parent_material.deinit();
+    
+    var child_material = try Material.init(allocator, "resources/shaders/triangle.v.glsl", "resources/shaders/triangle.f.glsl");
+    defer child_material.deinit();
+    
+    // Create parent cube (larger, slower rotation)
+    var parent_cube = try SceneGraphNode.init(allocator, &cube_geometry, &parent_material);
+    defer parent_cube.deinit();
+    
+    // Set parent transform (translate and scale)
+    const parent_translation = zlm.Mat4.createTranslation(zlm.Vec3.new(0.0, 0.0, 0.0)); // At origin
+    const parent_scale = zlm.Mat4.createScale(1.0, 1.0, 1.0); // Normal size
+    parent_cube.setTransform(parent_scale.mul(parent_translation));
+    parent_cube.x_rotation_speed = 0.5; // Slow rotation
+    parent_cube.y_rotation_speed = 0.3;
+    parent_cube.z_rotation_speed = 0.2;
+    
+    // Create child cube (smaller, faster rotation, offset from parent)
+    var child_cube = try SceneGraphNode.init(allocator, &cube_geometry, &child_material);
+    defer child_cube.deinit();
+    
+    // Set child transform (offset from parent)
+    const child_translation = zlm.Mat4.createTranslation(zlm.Vec3.new(3.0, 0.0, 0.0)); // 3 units to the right
+    const child_scale = zlm.Mat4.createScale(0.5, 0.5, 0.5); // 50% smaller
+    child_cube.setTransform(child_scale.mul(child_translation));
+    child_cube.x_rotation_speed = 1.0; // Faster rotation
+    child_cube.y_rotation_speed = 1.5;
+    child_cube.z_rotation_speed = 0.8;
+    
+    // Create parent-child relationship
+    try parent_cube.addChild(&child_cube);
+    
+    std.debug.print("Created parent-child cube scene:\n", .{});
+    std.debug.print("  Parent: normal size, slow rotation at origin\n", .{});
+    std.debug.print("  Child: smaller, faster rotation, offset from parent\n", .{});
+    
 
     std.debug.print("OpenGL context created successfully\n", .{});
     std.debug.print("Controls:\n", .{});
@@ -134,14 +171,14 @@ pub fn main() !void {
         const delta_time: f32 = @as(f32, @floatFromInt(delta_ms)) / 1000.0;
         last_time = current_time;
         
-        // Update scene graph node animation
-        triangle_node.update(delta_time);
+        // Update scene graph node animation (recursive - updates parent and all children)
+        parent_cube.update(delta_time);
 
         // Clear the screen (dark grey background)
         renderer_utils.clearScreen(0.1, 0.1, 0.1, 1.0);
 
-        // Render the scene
-        triangle_node.render(&camera);
+        // Render the scene (recursive - renders parent and all children)
+        parent_cube.render(&camera);
         
         // Render coordinate axes for reference
         axes_renderer.render(&camera);

@@ -68,9 +68,11 @@
 
 - [x] Extract geometry property of scene graph node into its own model, including vertex buffer data; structure; indices; and relevant interfaces
 
+- [x] Extract material properties of scene graph node into a new model, including shaders, programs, loading/unloading, and bindings behaviors
+
 ## Active Sprint
 
-- [ ] Extract material properties of scene graph node into a new model, including shaders, programs, loading/unloading, and bindings behaviors
+- [ ] Work through hierarchical scene graph node models with parent/child transforms to verify renderer tree walk (may require slighlty more sophisticated objects, like cubes)
 
 ## Backlog
 

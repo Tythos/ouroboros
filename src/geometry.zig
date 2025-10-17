@@ -99,6 +99,125 @@ pub const Geometry = struct {
         };
     }
     
+    /// Initialize geometry with cube data (centered at origin, colored faces)
+    pub fn initCube() !Geometry {
+        std.debug.print("Initializing cube geometry...\n", .{});
+        
+        // Define cube vertices with colored faces
+        // Each vertex: [x, y, z, r, g, b]
+        // Cube is centered at origin with size 2x2x2
+        const vertices = [_]f32{
+            // Front face (Z = +1) - Red
+            -1.0, -1.0,  1.0,  1.0, 0.0, 0.0,  // bottom-left
+             1.0, -1.0,  1.0,  1.0, 0.0, 0.0,  // bottom-right
+             1.0,  1.0,  1.0,  1.0, 0.0, 0.0,  // top-right
+            -1.0,  1.0,  1.0,  1.0, 0.0, 0.0,  // top-left
+            
+            // Back face (Z = -1) - Green
+            -1.0, -1.0, -1.0,  0.0, 1.0, 0.0,  // bottom-left
+            -1.0,  1.0, -1.0,  0.0, 1.0, 0.0,  // top-left
+             1.0,  1.0, -1.0,  0.0, 1.0, 0.0,  // top-right
+             1.0, -1.0, -1.0,  0.0, 1.0, 0.0,  // bottom-right
+            
+            // Top face (Y = +1) - Blue
+            -1.0,  1.0, -1.0,  0.0, 0.0, 1.0,  // bottom-left
+            -1.0,  1.0,  1.0,  0.0, 0.0, 1.0,  // bottom-right
+             1.0,  1.0,  1.0,  0.0, 0.0, 1.0,  // top-right
+             1.0,  1.0, -1.0,  0.0, 0.0, 1.0,  // top-left
+            
+            // Bottom face (Y = -1) - Yellow
+            -1.0, -1.0, -1.0,  1.0, 1.0, 0.0,  // bottom-left
+             1.0, -1.0, -1.0,  1.0, 1.0, 0.0,  // bottom-right
+             1.0, -1.0,  1.0,  1.0, 1.0, 0.0,  // top-right
+            -1.0, -1.0,  1.0,  1.0, 1.0, 0.0,  // top-left
+            
+            // Right face (X = +1) - Magenta
+             1.0, -1.0, -1.0,  1.0, 0.0, 1.0,  // bottom-left
+             1.0,  1.0, -1.0,  1.0, 0.0, 1.0,  // top-left
+             1.0,  1.0,  1.0,  1.0, 0.0, 1.0,  // top-right
+             1.0, -1.0,  1.0,  1.0, 0.0, 1.0,  // bottom-right
+            
+            // Left face (X = -1) - Cyan
+            -1.0, -1.0, -1.0,  0.0, 1.0, 1.0,  // bottom-left
+            -1.0, -1.0,  1.0,  0.0, 1.0, 1.0,  // bottom-right
+            -1.0,  1.0,  1.0,  0.0, 1.0, 1.0,  // top-right
+            -1.0,  1.0, -1.0,  0.0, 1.0, 1.0,  // top-left
+        };
+        
+        // Define indices for the cube (6 faces * 2 triangles * 3 vertices = 36 indices)
+        const indices = [_]u32{
+            // Front face
+            0, 1, 2,   2, 3, 0,
+            // Back face  
+            4, 5, 6,   6, 7, 4,
+            // Top face
+            8, 9, 10,  10, 11, 8,
+            // Bottom face
+            12, 13, 14, 14, 15, 12,
+            // Right face
+            16, 17, 18, 18, 19, 16,
+            // Left face
+            20, 21, 22, 22, 23, 20,
+        };
+        
+        // Create and bind VAO
+        var vao: gl.GLuint = 0;
+        gl.glGenVertexArrays(1, &vao);
+        gl.glBindVertexArray(vao);
+        
+        // Create and bind VBO
+        var vbo: gl.GLuint = 0;
+        gl.glGenBuffers(1, &vbo);
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo);
+        gl.glBufferData(
+            gl.GL_ARRAY_BUFFER,
+            @intCast(vertices.len * @sizeOf(f32)),
+            &vertices,
+            gl.GL_STATIC_DRAW,
+        );
+        
+        // Configure vertex attributes
+        const vertex_stride = 6 * @sizeOf(f32); // 6 floats per vertex
+        const position_offset = 0;
+        const color_offset = 3 * @sizeOf(f32);
+        
+        // Position attribute (location = 0)
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, vertex_stride, null);
+        gl.glEnableVertexAttribArray(0);
+        
+        // Color attribute (location = 1)
+        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, vertex_stride, @ptrFromInt(color_offset));
+        gl.glEnableVertexAttribArray(1);
+        
+        // Create and bind EBO
+        var ebo: gl.GLuint = 0;
+        gl.glGenBuffers(1, &ebo);
+        gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, ebo);
+        gl.glBufferData(
+            gl.GL_ELEMENT_ARRAY_BUFFER,
+            @intCast(indices.len * @sizeOf(u32)),
+            &indices,
+            gl.GL_STATIC_DRAW,
+        );
+        
+        // Unbind VAO
+        gl.glBindVertexArray(0);
+        
+        std.debug.print("Cube geometry initialized successfully\n", .{});
+        
+        return Geometry{
+            .vao = vao,
+            .vbo = vbo,
+            .ebo = ebo,
+            .vertex_count = 24, // 6 faces * 4 vertices per face
+            .index_count = 36,  // 6 faces * 2 triangles * 3 vertices
+            .has_indices = true,
+            .vertex_stride = vertex_stride,
+            .position_offset = position_offset,
+            .color_offset = color_offset,
+        };
+    }
+    
     /// Initialize geometry with custom vertex data
     pub fn init(vertices: []const f32, indices: ?[]const u32) !Geometry {
         std.debug.print("Initializing custom geometry...\n", .{});
