@@ -46,7 +46,7 @@
 
 ## Active Sprint
 
-- [ ] Add unit axes visualization for scene frame reference (x=r, y=g, z=b)
+- [x] Add unit axes visualization for scene frame reference (x=red, y=green, z=blue)
 
 ## Backlog
 

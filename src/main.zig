@@ -1,6 +1,7 @@
 const std = @import("std");
 const gl = @import("gl.zig");
 const Renderer = @import("renderer.zig").Renderer;
+const AxesRenderer = @import("axes.zig").AxesRenderer;
 const Camera = @import("camera.zig").Camera;
 const sdl = @cImport({
     @cInclude("SDL2/SDL.h");
@@ -59,17 +60,20 @@ pub fn main() !void {
     sdl.SDL_GetWindowSize(window, &window_w, &window_h);
     gl.glViewport(0, 0, window_w, window_h);
 
-    // Initialize renderer
+    // Initialize renderers
     const renderer = try Renderer.init(allocator);
     defer renderer.deinit();
+    
+    const axes_renderer = try AxesRenderer.init(allocator);
+    defer axes_renderer.deinit();
 
-    // Create camera on +X axis looking back at origin (mutable for animation)
+    // Create camera on +X axis looking back at origin (Z-up coordinate system)
     const aspect: f32 = @as(f32, @floatFromInt(window_w)) / @as(f32, @floatFromInt(window_h));
     const CameraModule = @import("camera.zig");
     var camera = Camera.initLookAt(
         CameraModule.Vec3.new(5.0, 0.0, 0.0),     // Position on +X axis, far enough to see triangle
         CameraModule.Vec3.new(0.0, 0.0, 0.0),     // Looking at origin
-        CameraModule.Vec3.new(0.0, 1.0, 0.0),     // Up is +Y
+        CameraModule.Vec3.new(0.0, 0.0, 1.0),     // Up is +Z (as god intended)
         std.math.degreesToRadians(60.0),          // FOV
         aspect,
         1e-1,                                     // Near plane
@@ -117,6 +121,9 @@ pub fn main() !void {
 
         // Render the scene
         renderer.render(model_matrix, &camera);
+        
+        // Render coordinate axes for reference
+        axes_renderer.render(&camera);
 
         // Swap buffers
         sdl.SDL_GL_SwapWindow(window);

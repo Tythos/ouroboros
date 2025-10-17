@@ -43,6 +43,7 @@ pub const GL_STATIC_DRAW: GLenum = 0x88E4;
 
 pub const GL_FLOAT: GLenum = 0x1406;
 pub const GL_TRIANGLES: GLenum = 0x0004;
+pub const GL_LINES: GLenum = 0x0001;
 
 // OpenGL function pointers
 pub var glCreateShader: *const fn (GLenum) callconv(.C) GLuint = undefined;
