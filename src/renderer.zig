@@ -2,12 +2,15 @@ const std = @import("std");
 const gl = @import("gl.zig");
 const shader = @import("shader.zig");
 const zlm = @import("zlm").as(f32);
+const Camera = @import("camera.zig").Camera;
 
 pub const Renderer = struct {
     program: gl.GLuint,
     vao: gl.GLuint,
     vbo: gl.GLuint,
-    transform_location: gl.GLint,
+    model_location: gl.GLint,
+    view_location: gl.GLint,
+    projection_location: gl.GLint,
     
     /// Initialize the renderer: load shaders, create VAO/VBO
     pub fn init(allocator: std.mem.Allocator) !Renderer {
@@ -20,21 +23,27 @@ pub const Renderer = struct {
             "resources/shaders/triangle.f.glsl",
         );
         
-        // Get uniform location
-        const transform_location = gl.glGetUniformLocation(program, "transform");
-        if (transform_location == -1) {
-            std.debug.print("Warning: 'transform' uniform not found in shader\n", .{});
+        // Get uniform locations for MVP matrices
+        const model_location = gl.glGetUniformLocation(program, "model");
+        const view_location = gl.glGetUniformLocation(program, "view");
+        const projection_location = gl.glGetUniformLocation(program, "projection");
+        
+        // Verify uniforms were found
+        if (model_location == -1 or view_location == -1 or projection_location == -1) {
+            std.debug.print("ERROR: Failed to locate MVP uniforms in shader\n", .{});
+            return error.ShaderUniformNotFound;
         }
         
-        // Define triangle vertices with rainbow colors
+        // Define triangle vertices with rainbow colors - CENTERED AT ORIGIN
         // Each vertex: [x, y, z, r, g, b]
+        // Large triangle in YZ plane, visible from +X axis
         const vertices = [_]f32{
-            // Position       // Color (red)
-             0.0,  0.5, 0.0,  1.0, 0.0, 0.0,
-            // Position       // Color (green)
-            -0.5, -0.5, 0.0,  0.0, 1.0, 0.0,
-            // Position       // Color (blue)
-             0.5, -0.5, 0.0,  0.0, 0.0, 1.0,
+            // Position       // Color (red) - top vertex
+             0.0,  1.0, 0.0,  1.0, 0.0, 0.0,
+            // Position       // Color (green) - bottom left
+             0.0, -1.0, -1.0,  0.0, 1.0, 0.0,
+            // Position       // Color (blue) - bottom right
+             0.0, -1.0, 1.0,  0.0, 0.0, 1.0,
         };
         
         // Create and bind VAO
@@ -79,36 +88,41 @@ pub const Renderer = struct {
         // Unbind VAO (good practice)
         gl.glBindVertexArray(0);
         
+        // Enable depth testing for proper 3D rendering
+        gl.glEnable(gl.GL_DEPTH_TEST);
+        gl.glDepthFunc(gl.GL_LESS);
+        
         std.debug.print("Renderer initialized successfully\n", .{});
         
         return Renderer{
             .program = program,
             .vao = vao,
             .vbo = vbo,
-            .transform_location = transform_location,
+            .model_location = model_location,
+            .view_location = view_location,
+            .projection_location = projection_location,
         };
     }
     
-    /// Render the triangle with the given rotation angle
-    pub fn render(self: *const Renderer, angle: f32) void {
-        // Clear the screen
+    /// Render with the given model matrix and camera
+    /// This is the core rendering function following the pattern: render(model, camera)
+    pub fn render(self: *const Renderer, model: zlm.Mat4, camera: *const Camera) void {
+        // Clear the screen and depth buffer
         gl.glClearColor(0.1, 0.1, 0.2, 1.0);  // Dark blue background
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT);
         
         // Use our shader program
         gl.glUseProgram(self.program);
         
-        // Create a rotation matrix around the Z axis using zlm
-        const z_axis = zlm.Vec3.new(0, 0, 1);
-        const rotation_matrix = zlm.Mat4.createAngleAxis(z_axis, angle);
+        // Get view and projection matrices from camera
+        const view = camera.getViewMatrix();
+        const projection = camera.getProjectionMatrix();
         
-        // Set the transform uniform (mat4)
-        if (self.transform_location != -1) {
-            // OpenGL expects column-major matrices, but zlm stores row-major
-            // We need to transpose before passing to OpenGL
-            const transposed = rotation_matrix.transpose();
-            gl.glUniformMatrix4fv(self.transform_location, 1, gl.GL_FALSE, @ptrCast(&transposed.fields));
-        }
+        // Upload MVP matrices to shader
+        // Note: zlm matrices work directly with OpenGL without transposition
+        gl.glUniformMatrix4fv(self.model_location, 1, gl.GL_FALSE, @ptrCast(&model.fields));
+        gl.glUniformMatrix4fv(self.view_location, 1, gl.GL_FALSE, @ptrCast(&view.fields));
+        gl.glUniformMatrix4fv(self.projection_location, 1, gl.GL_FALSE, @ptrCast(&projection.fields));
         
         // Bind VAO and draw
         gl.glBindVertexArray(self.vao);

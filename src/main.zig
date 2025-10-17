@@ -1,6 +1,7 @@
 const std = @import("std");
 const gl = @import("gl.zig");
 const Renderer = @import("renderer.zig").Renderer;
+const Camera = @import("camera.zig").Camera;
 const sdl = @cImport({
     @cInclude("SDL2/SDL.h");
 });
@@ -62,6 +63,19 @@ pub fn main() !void {
     const renderer = try Renderer.init(allocator);
     defer renderer.deinit();
 
+    // Create camera on +X axis looking back at origin (mutable for animation)
+    const aspect: f32 = @as(f32, @floatFromInt(window_w)) / @as(f32, @floatFromInt(window_h));
+    const CameraModule = @import("camera.zig");
+    var camera = Camera.initLookAt(
+        CameraModule.Vec3.new(5.0, 0.0, 0.0),     // Position on +X axis, far enough to see triangle
+        CameraModule.Vec3.new(0.0, 0.0, 0.0),     // Looking at origin
+        CameraModule.Vec3.new(0.0, 1.0, 0.0),     // Up is +Y
+        std.math.degreesToRadians(60.0),          // FOV
+        aspect,
+        1e-1,                                     // Near plane
+        1e+3,                                     // Far plane
+    );
+
     std.debug.print("OpenGL context created successfully\n", .{});
     std.debug.print("Press ESC or close the window to quit\n", .{});
 
@@ -84,15 +98,25 @@ pub fn main() !void {
             }
         }
 
-        // Calculate rotation angle based on time
+        // Calculate animation time
         const current_time = sdl.SDL_GetTicks64();
         const elapsed_ms = current_time - start_time;
         const elapsed_seconds: f32 = @as(f32, @floatFromInt(elapsed_ms)) / 1000.0;
+
+        // Animate camera position: oscillate between +3 and +7 on X axis
+        const camera_oscillation_speed: f32 = 0.5; // Hz (cycles per second)
+        const camera_x = 5.0 + 2.0 * @sin(elapsed_seconds * camera_oscillation_speed * 2.0 * std.math.pi);
+        camera.setPosition(CameraModule.Vec3.new(camera_x, 0.0, 0.0));
+        camera.lookAt(CameraModule.Vec3.new(0.0, 0.0, 0.0));
+
+        // Compute model matrix: rotation around X-axis
         const rotation_speed: f32 = 1.0; // radians per second
         const angle: f32 = elapsed_seconds * rotation_speed;
+        const x_axis = CameraModule.Vec3.new(1.0, 0.0, 0.0);
+        const model_matrix = CameraModule.Mat4.createAngleAxis(x_axis, angle);
 
         // Render the scene
-        renderer.render(angle);
+        renderer.render(model_matrix, &camera);
 
         // Swap buffers
         sdl.SDL_GL_SwapWindow(window);

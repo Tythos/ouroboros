@@ -21,6 +21,16 @@ pub const GL_TRUE: GLboolean = 1;
 pub const GL_COLOR_BUFFER_BIT: GLbitfield = 0x00004000;
 pub const GL_DEPTH_BUFFER_BIT: GLbitfield = 0x00000100;
 
+pub const GL_DEPTH_TEST: GLenum = 0x0B71;
+pub const GL_LESS: GLenum = 0x0201;
+
+// Error codes
+pub const GL_NO_ERROR: GLenum = 0;
+pub const GL_INVALID_ENUM: GLenum = 0x0500;
+pub const GL_INVALID_VALUE: GLenum = 0x0501;
+pub const GL_INVALID_OPERATION: GLenum = 0x0502;
+pub const GL_OUT_OF_MEMORY: GLenum = 0x0505;
+
 pub const GL_VERTEX_SHADER: GLenum = 0x8B31;
 pub const GL_FRAGMENT_SHADER: GLenum = 0x8B30;
 
@@ -70,6 +80,10 @@ pub var glClear: *const fn (GLbitfield) callconv(.C) void = undefined;
 pub var glDrawArrays: *const fn (GLenum, GLint, GLsizei) callconv(.C) void = undefined;
 
 pub var glViewport: *const fn (GLint, GLint, GLsizei, GLsizei) callconv(.C) void = undefined;
+
+pub var glEnable: *const fn (GLenum) callconv(.C) void = undefined;
+pub var glDepthFunc: *const fn (GLenum) callconv(.C) void = undefined;
+pub var glGetError: *const fn () callconv(.C) GLenum = undefined;
 
 /// Load an OpenGL function pointer using SDL
 fn loadFunction(comptime T: type, name: [*:0]const u8) T {
@@ -121,5 +135,17 @@ pub fn loadFunctions() void {
     
     glViewport = loadFunction(@TypeOf(glViewport), "glViewport");
     
+    glEnable = loadFunction(@TypeOf(glEnable), "glEnable");
+    glDepthFunc = loadFunction(@TypeOf(glDepthFunc), "glDepthFunc");
+    glGetError = loadFunction(@TypeOf(glGetError), "glGetError");
+    
     std.debug.print("OpenGL functions loaded successfully\n", .{});
+}
+
+/// Check for OpenGL errors and print them (useful for debugging)
+pub fn checkError(context: []const u8) void {
+    const err = glGetError();
+    if (err != GL_NO_ERROR) {
+        std.debug.print("OpenGL Error in {s}: 0x{X}\n", .{ context, err });
+    }
 }
