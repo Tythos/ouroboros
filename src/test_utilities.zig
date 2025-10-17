@@ -78,8 +78,10 @@ pub fn expectCrossProductDefault(v1: Vec3, v2: Vec3, expected: Vec3) !void {
     
 /// Compare two Mat4 matrices with tolerance
 pub fn expectMat4Equal(actual: Mat4, expected: Mat4, tolerance: f32) !void {
-        for (0..16) |i| {
-            try std.testing.expectApproxEqAbs(actual.fields[i], expected.fields[i], tolerance);
+        for (0..4) |row| {
+            for (0..4) |col| {
+                try std.testing.expectApproxEqAbs(actual.fields[row][col], expected.fields[row][col], tolerance);
+            }
         }
     }
     
@@ -91,9 +93,11 @@ pub fn expectMat4EqualDefault(actual: Mat4, expected: Mat4) !void {
 /// Check if two Mat4 matrices are close within tolerance
 pub fn expectMat4Close(actual: Mat4, expected: Mat4, tolerance: f32) !void {
         var max_diff: f32 = 0.0;
-        for (0..16) |i| {
-            const diff = @abs(actual.fields[i] - expected.fields[i]);
-            max_diff = @max(max_diff, diff);
+        for (0..4) |row| {
+            for (0..4) |col| {
+                const diff = @abs(actual.fields[row][col] - expected.fields[row][col]);
+                max_diff = @max(max_diff, diff);
+            }
         }
         try std.testing.expect(max_diff <= tolerance);
     }
@@ -116,7 +120,7 @@ pub fn expectMat4IdentityDefault(matrix: Mat4) !void {
     
 /// Test matrix-vector multiplication
 pub fn expectMat4MulVec3(matrix: Mat4, vector: Vec3, expected: Vec3, tolerance: f32) !void {
-        const actual = matrix.mulVec3(vector);
+        const actual = vector.transformPosition(matrix);
         try expectVec3Equal(actual, expected, tolerance);
     }
     
@@ -303,5 +307,255 @@ pub fn expectLineGeometry(vertices: []const f32, stride: usize, line_count: usiz
 pub fn expectLineGeometryDefault(vertices: []const f32, stride: usize, line_count: usize) !void {
     try expectLineGeometry(vertices, stride, line_count, DEFAULT_TOLERANCE);
 }
+
+// ============================================================================
+// IN-MODULE TESTS - Testing the testers using mathematical properties
+// ============================================================================
+
+test "vector equality with known values" {
+    const v1 = Vec3.new(1.0, 2.0, 3.0);
+    const v2 = Vec3.new(1.0, 2.0, 3.0);
+    const v3 = Vec3.new(1.0001, 2.0001, 3.0001);
+    
+    // Test exact equality with small tolerance (floating point precision)
+    try expectVec3Equal(v1, v2, 1e-6);
+    try expectVec3EqualDefault(v1, v2);
+    
+    // Test approximate equality within tolerance
+    try expectVec3Equal(v1, v3, 0.001);
+    try expectVec3Close(v1, v3, 0.001);
+}
+
+test "vector mathematical properties" {
+    const v1 = Vec3.new(3.0, 4.0, 0.0);
+    const v2 = Vec3.new(0.0, 0.0, 1.0);
+    
+    // Test length calculation (3-4-5 triangle)
+    try expectLength(v1, 5.0, 0.001);
+    try expectLengthDefault(v2, 1.0);
+    
+    // Test dot product (orthogonal vectors = 0)
+    try expectDotProduct(v1, v2, 0.0, 0.001);
+    
+    // Test cross product (right-hand rule)
+    const x_axis = Vec3.new(1.0, 0.0, 0.0);
+    const y_axis = Vec3.new(0.0, 1.0, 0.0);
+    const z_axis = Vec3.new(0.0, 0.0, 1.0);
+    try expectCrossProduct(x_axis, y_axis, z_axis, 0.001);
+}
+
+test "orthogonal vector properties" {
+    const x_axis = Vec3.new(1.0, 0.0, 0.0);
+    const y_axis = Vec3.new(0.0, 1.0, 0.0);
+    const z_axis = Vec3.new(0.0, 0.0, 1.0);
+    
+    // Test orthogonality
+    try expectVec3Orthogonal(x_axis, y_axis, 0.001);
+    try expectVec3OrthogonalDefault(y_axis, z_axis);
+    
+    // Test right-handed coordinate system
+    try expectRightHandedSystem(x_axis, y_axis, z_axis, 0.001);
+    try expectRightHandedSystemDefault(x_axis, y_axis, z_axis);
+    
+    // Test all orthogonal
+    const axes = [_]Vec3{ x_axis, y_axis, z_axis };
+    try expectAllOrthogonal(&axes, 0.001);
+}
+
+test "matrix identity properties" {
+    const identity = Mat4.identity;
+    const test_vec = Vec3.new(1.0, 2.0, 3.0);
+    
+    // Test identity matrix properties
+    try expectMat4Identity(identity, 0.001);
+    try expectMat4IdentityDefault(identity);
+    
+    // Test identity doesn't change vectors
+    const transformed = test_vec.transformPosition(identity);
+    try expectVec3Equal(transformed, test_vec, 0.001);
+    
+    // Test identity multiplication
+    const result = identity.mul(identity);
+    try expectMat4Equal(result, identity, 0.001);
+}
+
+test "matrix transformations" {
+    // Create a simple translation matrix
+    const translation = Mat4.createTranslation(Vec3.new(1.0, 2.0, 3.0));
+    const test_point = Vec3.new(0.0, 0.0, 0.0);
+    const expected = Vec3.new(1.0, 2.0, 3.0);
+    
+    // Test matrix-vector multiplication
+    const result = test_point.transformPosition(translation);
+    try expectMat4MulVec3(translation, test_point, expected, 0.001);
+    try expectVec3Equal(result, expected, 0.001);
+}
+
+test "color space properties" {
+    const red = Vec3.new(1.0, 0.0, 0.0);
+    const green = Vec3.new(0.0, 1.0, 0.0);
+    const blue = Vec3.new(0.0, 0.0, 1.0);
+    
+    // Test color normalization
+    try expectNormalized(red, 0.001);
+    try expectNormalizedDefault(green);
+    
+    // Test color orthogonality in RGB space
+    try expectColorOrthogonal(red, green, 0.001);
+    try expectColorOrthogonalDefault(green, blue);
+    
+    // Test color equality
+    const red_copy = Vec3.new(1.0, 0.0, 0.0);
+    try expectColorEqual(red, red_copy, 0.001);
+    try expectColorEqualDefault(red, red_copy);
+}
+
+test "bounding box mathematics" {
+    const min_bounds = Vec3.new(-1.0, -2.0, -3.0);
+    const max_bounds = Vec3.new(1.0, 2.0, 3.0);
+    const expected_center = Vec3.new(0.0, 0.0, 0.0);
+    const expected_size = Vec3.new(2.0, 4.0, 6.0);
+    
+    // Test bounding box calculations
+    try expectBoundingBox(min_bounds, max_bounds, expected_center, expected_size, 0.001);
+    try expectBoundingBoxDefault(min_bounds, max_bounds, expected_center, expected_size);
+}
+
+test "vertex data structure" {
+    // Test vertex data with known values
+    const vertices = [_]f32{
+        0.0, 0.0, 0.0,  1.0, 0.0, 0.0,  // Origin, red
+        1.0, 0.0, 0.0,  0.0, 1.0, 0.0,  // +X, green
+    };
+    const expected_positions = [_]Vec3{
+        Vec3.new(0.0, 0.0, 0.0),
+        Vec3.new(1.0, 0.0, 0.0),
+    };
+    const expected_colors = [_]Vec3{
+        Vec3.new(1.0, 0.0, 0.0),
+        Vec3.new(0.0, 1.0, 0.0),
+    };
+    
+    // Test vertex data parsing
+    try expectVertexData(&vertices, 6, &expected_positions, &expected_colors, 0.001);
+    try expectVertexDataDefault(&vertices, 6, &expected_positions, &expected_colors);
+}
+
+test "axes vertex data" {
+    const axes_length: f32 = 2.0;
+    const vertices = [_]f32{
+        // X-axis (red)
+        0.0, 0.0, 0.0,  1.0, 0.0, 0.0,
+        2.0, 0.0, 0.0,  1.0, 0.0, 0.0,
+        // Y-axis (green)
+        0.0, 0.0, 0.0,  0.0, 1.0, 0.0,
+        0.0, 2.0, 0.0,  0.0, 1.0, 0.0,
+        // Z-axis (blue)
+        0.0, 0.0, 0.0,  0.0, 0.0, 1.0,
+        0.0, 0.0, 2.0,  0.0, 0.0, 1.0,
+    };
+    
+    // Test axes vertex data
+    try expectAxesVertexData(&vertices, axes_length, 0.001);
+    try expectAxesVertexDataDefault(&vertices, axes_length);
+}
+
+test "vertex layout mathematics" {
+    const vertex_size = 6 * @sizeOf(f32);
+    const position_offset = 0;
+    const color_offset = 3 * @sizeOf(f32);
+    const stride = 6 * @sizeOf(f32);
+    
+    // Test vertex layout
+    try expectVertexLayout(vertex_size, position_offset, color_offset, stride);
+}
+
+test "line geometry properties" {
+    const vertices = [_]f32{
+        // Line 1: origin to +X
+        0.0, 0.0, 0.0,  1.0, 0.0, 0.0,
+        1.0, 0.0, 0.0,  1.0, 0.0, 0.0,
+        // Line 2: origin to +Y
+        0.0, 0.0, 0.0,  0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0,  0.0, 1.0, 0.0,
+    };
+    
+    // Test line geometry
+    try expectLineGeometry(&vertices, 6, 2, 0.001);
+    try expectLineGeometryDefault(&vertices, 6, 2);
+}
+
+test "tolerance edge cases" {
+    const v1 = Vec3.new(1.0, 0.0, 0.0);
+    const v2 = Vec3.new(1.0, 0.0, 0.0);
+    
+    // Test with very small tolerance (should pass)
+    try expectVec3Equal(v1, v2, 0.0);
+    
+    // Test with large tolerance (should pass)
+    const v3 = Vec3.new(1.1, 0.1, 0.1);
+    try expectVec3Close(v1, v3, 0.2);
+}
+
+test "mathematical consistency" {
+    // Test that our utilities are mathematically consistent
+    const a = Vec3.new(1.0, 2.0, 3.0);
+    const b = Vec3.new(4.0, 5.0, 6.0);
+    
+    // Test dot product consistency
+    const dot_ab = a.dot(b);
+    const dot_ba = b.dot(a);
+    try std.testing.expectApproxEqAbs(dot_ab, dot_ba, 0.001);
+    
+    // Test cross product anti-commutativity
+    const cross_ab = a.cross(b);
+    const cross_ba = b.cross(a);
+    const neg_cross_ba = cross_ba.scale(-1.0);
+    try expectVec3Equal(cross_ab, neg_cross_ba, 0.001);
+}
+
+test "matrix multiplication properties" {
+    const m1 = Mat4.identity;
+    const m2 = Mat4.identity;
+    
+    // Test identity multiplication
+    const result = m1.mul(m2);
+    try expectMat4Mul(m1, m2, Mat4.identity, 0.001);
+    try expectMat4MulDefault(m1, m2, Mat4.identity);
+    
+    // Test matrix equality
+    try expectMat4Equal(result, Mat4.identity, 0.001);
+    try expectMat4EqualDefault(result, Mat4.identity);
+}
+
+test "vector normalization edge cases" {
+    const unit_x = Vec3.new(1.0, 0.0, 0.0);
+    const unit_y = Vec3.new(0.0, 1.0, 0.0);
+    
+    // Test normalized vectors
+    try expectNormalized(unit_x, 0.001);
+    try expectNormalizedDefault(unit_y);
+    
+    // Test non-normalized vector
+    const non_unit = Vec3.new(2.0, 0.0, 0.0);
+    try expectLength(non_unit, 2.0, 0.001);
+}
+
+test "coordinate system validation" {
+    // Test standard coordinate system
+    const x = Vec3.new(1.0, 0.0, 0.0);
+    const y = Vec3.new(0.0, 1.0, 0.0);
+    const z = Vec3.new(0.0, 0.0, 1.0);
+    
+    // Test right-handed system
+    try expectRightHandedSystem(x, y, z, 0.001);
+    try expectRightHandedSystemDefault(x, y, z);
+    
+    // Test all vectors are orthogonal
+    const axes = [_]Vec3{ x, y, z };
+    try expectAllOrthogonal(&axes, 0.001);
+    try expectAllOrthogonalDefault(&axes);
+}
+
 
 

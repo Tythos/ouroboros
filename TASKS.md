@@ -64,9 +64,9 @@
 
 - [x] Add in-module tests to `src/shader.zig`
 
-## Active Sprint
+- [x] Add in-module tests to `src/test_utilities.zig`
 
-- [ ] Add in-module tests to `src/test_utilities.zig`
+## Active Sprint
 
 ## Backlog
 

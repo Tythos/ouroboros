@@ -22,32 +22,34 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     
-    // Build and link SDL2
+    // Build and link dependencies
     SDL.linkSDL2(b, exe, target);
-    
-    // Add zlm math library
     zlm_build.addZlm(b, exe, target, optimize);
-    
-    b.installArtifact(exe);
 
+    // define installable run
+    b.installArtifact(exe);
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
-                 
+
+    // define runnable command
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
-
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
+    // define testing executable
     const exe_unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = b.path("src/tests.zig"),
         .target = target,
         .optimize = optimize,
-    });                                                                                                                                                         
+    });
+    
+    // Add zlm math library to tests
+    zlm_build.addZlm(b, exe_unit_tests, target, optimize);                                                                                                                                                         
 
+    // define run-test step
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
-
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_exe_unit_tests.step);
 }
