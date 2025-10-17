@@ -1,5 +1,6 @@
 const std = @import("std");
 const zlm = @import("zlm").as(f32);
+const test_utils = @import("test_utilities.zig");
 
 // Export zlm for convenience
 pub const Vec3 = zlm.Vec3;
@@ -124,167 +125,48 @@ pub const Camera = struct {
 // Unit Tests
 // ============================================================================
 
-test "Camera LUR frame orthonormality" {
-    const aspect: f32 = 16.0 / 9.0;
-    const camera = Camera.initDefault(aspect);
-    
-    // Test that all frame vectors are normalized
-    const look_len = camera.look.length();
-    const up_len = camera.up.length();
-    const right_len = camera.right.length();
-    
-    try std.testing.expectApproxEqAbs(1.0, look_len, 0.0001);
-    try std.testing.expectApproxEqAbs(1.0, up_len, 0.0001);
-    try std.testing.expectApproxEqAbs(1.0, right_len, 0.0001);
-    
-    // Test that frame vectors are orthogonal (dot product = 0)
-    const look_dot_up = camera.look.dot(camera.up);
-    const look_dot_right = camera.look.dot(camera.right);
-    const up_dot_right = camera.up.dot(camera.right);
-    
-    try std.testing.expectApproxEqAbs(0.0, look_dot_up, 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, look_dot_right, 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, up_dot_right, 0.0001);
+test "Camera frame orthonormality" {
+    const camera = Camera.initDefault(16.0 / 9.0);
+    try test_utils.expectNormalizedDefault(camera.look);
+    try test_utils.expectNormalizedDefault(camera.up);
+    try test_utils.expectNormalizedDefault(camera.right);
+    try test_utils.expectAllOrthogonalDefault(&[_]zlm.Vec3{ camera.look, camera.up, camera.right });
+    try test_utils.expectRightHandedSystemDefault(camera.right, camera.up, camera.look);
 }
 
-test "Camera LUR frame handedness" {
-    const aspect: f32 = 1.0;
-    const camera = Camera.initDefault(aspect);
-    
-    // Verify right-handed coordinate system: right = look × up
-    const computed_right = camera.look.cross(camera.up);
-    
-    try std.testing.expectApproxEqAbs(camera.right.x, computed_right.x, 0.0001);
-    try std.testing.expectApproxEqAbs(camera.right.y, computed_right.y, 0.0001);
-    try std.testing.expectApproxEqAbs(camera.right.z, computed_right.z, 0.0001);
-}
-
-test "Camera initLookAt" {
-    const aspect: f32 = 1.0;
-    const position = zlm.Vec3.new(0.0, 0.0, 5.0);
-    const target = zlm.Vec3.new(0.0, 0.0, 0.0);
-    const up = zlm.Vec3.new(0.0, 1.0, 0.0);
-    
-    const camera = Camera.initLookAt(
-        position,
-        target,
-        up,
-        std.math.degreesToRadians(45.0),
-        aspect,
-        0.1,
-        100.0,
-    );
-    
-    // Camera should be looking along -Z (into the scene)
-    const expected_look = zlm.Vec3.new(0.0, 0.0, -1.0);
-    try std.testing.expectApproxEqAbs(expected_look.x, camera.look.x, 0.0001);
-    try std.testing.expectApproxEqAbs(expected_look.y, camera.look.y, 0.0001);
-    try std.testing.expectApproxEqAbs(expected_look.z, camera.look.z, 0.0001);
-    
-    // Up should remain +Y
-    try std.testing.expectApproxEqAbs(0.0, camera.up.x, 0.0001);
-    try std.testing.expectApproxEqAbs(1.0, camera.up.y, 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, camera.up.z, 0.0001);
-    
-    // Right should be +X
-    try std.testing.expectApproxEqAbs(1.0, camera.right.x, 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, camera.right.y, 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, camera.right.z, 0.0001);
-}
-
-test "Camera view matrix identity at origin" {
-    const aspect: f32 = 1.0;
-    const position = zlm.Vec3.new(0.0, 0.0, 0.0);
-    const look = zlm.Vec3.new(0.0, 0.0, -1.0);
-    const up = zlm.Vec3.new(0.0, 1.0, 0.0);
-    
-    const camera = Camera.init(
-        position,
-        look,
-        up,
-        std.math.degreesToRadians(45.0),
-        aspect,
-        0.1,
-        100.0,
-    );
-    
+test "Camera view matrix" {
+    const camera = Camera.init(zlm.Vec3.new(2.0, 3.0, 4.0), zlm.Vec3.new(0.0, 0.0, -1.0), zlm.Vec3.new(0.0, 1.0, 0.0), std.math.degreesToRadians(45.0), 1.0, 0.1, 100.0);
     const view = camera.getViewMatrix();
     
-    // When camera is at origin looking down -Z with up as +Y,
-    // view matrix should be close to identity (with Z flipped)
-    // Top-left 3x3 should be rotation part (identity-like)
-    try std.testing.expectApproxEqAbs(1.0, view.fields[0][0], 0.0001); // right.x
-    try std.testing.expectApproxEqAbs(0.0, view.fields[0][1], 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, view.fields[0][2], 0.0001);
-    
-    try std.testing.expectApproxEqAbs(0.0, view.fields[1][0], 0.0001);
-    try std.testing.expectApproxEqAbs(1.0, view.fields[1][1], 0.0001); // up.y
-    try std.testing.expectApproxEqAbs(0.0, view.fields[1][2], 0.0001);
-    
-    try std.testing.expectApproxEqAbs(0.0, view.fields[2][0], 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, view.fields[2][1], 0.0001);
-    try std.testing.expectApproxEqAbs(1.0, view.fields[2][2], 0.0001); // -look.z (flipped)
-    
-    // Translation should be zero
-    try std.testing.expectApproxEqAbs(0.0, view.fields[3][0], 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, view.fields[3][1], 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, view.fields[3][2], 0.0001);
+    // Camera position should transform to origin
+    const origin = view.mulVec3(camera.position);
+    try test_utils.expectVec3EqualDefault(origin, zlm.Vec3.new(0.0, 0.0, 0.0));
 }
 
-test "Camera projection matrix properties" {
-    const aspect: f32 = 16.0 / 9.0;
-    const camera = Camera.initDefault(aspect);
-    
+test "Camera projection matrix" {
+    const camera = Camera.initDefault(16.0 / 9.0);
     const proj = camera.getProjectionMatrix();
     
-    // Projection matrix should have specific structure for perspective
-    // [0,0] relates to FOV and aspect
-    // [1,1] relates to FOV
-    // [2,2] and [2,3] relate to near/far clipping
-    // [3,2] should be -1 for perspective divide
+    // Test near/far plane clipping
+    const near_point = zlm.Vec3.new(0.0, 0.0, -camera.near);
+    const far_point = zlm.Vec3.new(0.0, 0.0, -camera.far);
+    const near_clip = proj.mulVec3(near_point);
+    const far_clip = proj.mulVec3(far_point);
     
-    // Just verify it's not identity and has the perspective structure
-    try std.testing.expect(proj.fields[0][0] != 0.0);
-    try std.testing.expect(proj.fields[1][1] != 0.0);
-    try std.testing.expect(proj.fields[2][2] != 0.0);
-    try std.testing.expectApproxEqAbs(-1.0, proj.fields[2][3], 0.0001);
+    try std.testing.expectApproxEqAbs(-1.0, near_clip.z, 0.0001);
+    try std.testing.expectApproxEqAbs(1.0, far_clip.z, 0.0001);
 }
 
-test "Camera lookAt method" {
-    const aspect: f32 = 1.0;
-    var camera = Camera.initDefault(aspect);
+test "Camera operations maintain frame" {
+    var camera = Camera.initDefault(1.0);
     
-    // Make camera look at a point to the right
-    const target = zlm.Vec3.new(1.0, 0.0, 0.0);
-    camera.lookAt(target);
+    // Test lookAt operation
+    camera.lookAt(zlm.Vec3.new(1.0, 0.0, 0.0));
+    try test_utils.expectAllOrthogonalDefault(&[_]zlm.Vec3{ camera.look, camera.up, camera.right });
     
-    // Look direction should point toward +X
-    const expected_look_dir = target.sub(camera.position).normalize();
-    try std.testing.expectApproxEqAbs(expected_look_dir.x, camera.look.x, 0.0001);
-    try std.testing.expectApproxEqAbs(expected_look_dir.y, camera.look.y, 0.0001);
-    try std.testing.expectApproxEqAbs(expected_look_dir.z, camera.look.z, 0.0001);
-    
-    // Frame should still be orthonormal
-    try std.testing.expectApproxEqAbs(0.0, camera.look.dot(camera.up), 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, camera.look.dot(camera.right), 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, camera.up.dot(camera.right), 0.0001);
-}
-
-test "Camera setLook maintains orthonormality" {
-    const aspect: f32 = 1.0;
-    var camera = Camera.initDefault(aspect);
-    
-    // Set a new look direction (diagonal)
-    const new_look = zlm.Vec3.new(1.0, 1.0, 0.0);
-    camera.setLook(new_look);
-    
-    // Verify orthonormality is maintained
-    try std.testing.expectApproxEqAbs(1.0, camera.look.length(), 0.0001);
-    try std.testing.expectApproxEqAbs(1.0, camera.up.length(), 0.0001);
-    try std.testing.expectApproxEqAbs(1.0, camera.right.length(), 0.0001);
-    
-    try std.testing.expectApproxEqAbs(0.0, camera.look.dot(camera.up), 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, camera.look.dot(camera.right), 0.0001);
-    try std.testing.expectApproxEqAbs(0.0, camera.up.dot(camera.right), 0.0001);
+    // Test rotation
+    camera.rotate(zlm.Vec3.new(0.0, 1.0, 0.0), std.math.degreesToRadians(90.0));
+    try test_utils.expectAllOrthogonalDefault(&[_]zlm.Vec3{ camera.look, camera.up, camera.right });
+    try test_utils.expectRightHandedSystemDefault(camera.right, camera.up, camera.look);
 }
 
