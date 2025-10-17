@@ -51,15 +51,15 @@ pub const Renderer = struct {
     
     /// Create triangle VAO
     fn createTriangleGeometry() !gl.GLuint {
-        // Define triangle vertices with rainbow colors at the origin (larger size)
+        // Define triangle vertices with rainbow colors at the origin, facing -X (towards camera)
         // Each vertex: [x, y, z, r, g, b]
         const vertices = [_]f32{
-            // Position       // Color (red)
-             0.0,  1.0, 0.0,  1.0, 0.0, 0.0,
-            // Position       // Color (green)
-            -1.0, -1.0, 0.0,  0.0, 1.0, 0.0,
-            // Position       // Color (blue)
-             1.0, -1.0, 0.0,  0.0, 0.0, 1.0,
+            // Position       // Color (red) - top vertex
+             1.0,  1.0, 0.0,  1.0, 0.0, 0.0,
+            // Position       // Color (green) - bottom left
+             1.0, -1.0, -1.0, 0.0, 1.0, 0.0,
+            // Position       // Color (blue) - bottom right
+             1.0, -1.0,  1.0, 0.0, 0.0, 1.0,
         };
         
         // Create and bind VAO
@@ -185,8 +185,8 @@ pub const Renderer = struct {
         return vbo;
     }
     
-    /// Render the scene with the given rotation angle and camera
-    pub fn render(self: *const Renderer, angle: f32, cam: camera.Camera) void {
+    /// Render the scene with the given camera
+    pub fn render(self: *const Renderer, cam: camera.Camera) void {
         // Clear the screen
         gl.glClearColor(0.05, 0.05, 0.1, 1.0);  // Darker background for better contrast
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT);
@@ -194,24 +194,8 @@ pub const Renderer = struct {
         // Use our shader program
         gl.glUseProgram(self.program);
         
-        // Create 3D rotation matrices around different axes for the triangle
-        // Rotate around X axis (pitch)
-        const x_axis = zlm.Vec3.new(1, 0, 0);
-        const pitch_angle = angle * 0.5; // Slower rotation around X
-        const pitch_matrix = zlm.Mat4.createAngleAxis(x_axis, pitch_angle);
-        
-        // Rotate around Y axis (yaw)  
-        const y_axis = zlm.Vec3.new(0, 1, 0);
-        const yaw_angle = angle * 0.7; // Different speed for Y
-        const yaw_matrix = zlm.Mat4.createAngleAxis(y_axis, yaw_angle);
-        
-        // Rotate around Z axis (roll)
-        const z_axis = zlm.Vec3.new(0, 0, 1);
-        const roll_angle = angle; // Full speed for Z
-        const roll_matrix = zlm.Mat4.createAngleAxis(z_axis, roll_angle);
-        
-        // Combine rotations: Z * Y * X (applied in reverse order)
-        const model_matrix = roll_matrix.mul(yaw_matrix).mul(pitch_matrix);
+        // Temporarily use identity matrix to test view matrix
+        const model_matrix = zlm.Mat4.identity;
         
         // Render triangle with full MVP matrix pipeline
         self.renderTriangle(model_matrix, cam);
@@ -255,8 +239,8 @@ pub const Renderer = struct {
     
     /// Render the triangle with model matrix and camera (full MVP pipeline)
     fn renderTriangle(self: *const Renderer, model_matrix: zlm.Mat4, cam: camera.Camera) void {
-        // Temporarily use just view matrix for debugging distortions
-        const mvp_matrix = cam.getViewOnlyMatrix(model_matrix);
+        // Test with simple orthographic projection
+        const mvp_matrix = cam.getMVPMatrix(model_matrix);
         
         // Set the transform uniform (mat4)
         if (self.transform_location != -1) {

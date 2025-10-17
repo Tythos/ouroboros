@@ -77,7 +77,6 @@ pub fn main() !void {
 
     // Main event loop
     var running = true;
-    const start_time = sdl.SDL_GetTicks64();
     
     while (running) {
         // Handle events
@@ -94,15 +93,8 @@ pub fn main() !void {
             }
         }
 
-        // Calculate rotation angle based on time
-        const current_time = sdl.SDL_GetTicks64();
-        const elapsed_ms = current_time - start_time;
-        const elapsed_seconds: f32 = @as(f32, @floatFromInt(elapsed_ms)) / 1000.0;
-        const rotation_speed: f32 = 1.0; // radians per second
-        const angle: f32 = elapsed_seconds * rotation_speed;
-
         // Render the scene with camera
-        renderer.render(angle, cam);
+        renderer.render(cam);
 
         // Swap buffers
         sdl.SDL_GL_SwapWindow(window);

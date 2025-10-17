@@ -40,62 +40,41 @@ pub const Camera = struct {
         };
     }
     
-    /// Create a default camera at (7, 5, 3) with LUR frame looking towards origin
+    /// Create a default camera at (10, 0, 0) with LUR frame looking towards origin
     pub fn default() Camera {
         // Calculate look direction from position to origin
-        const position = zlm.Vec3.new(7.0, 5.0, 3.0);
+        const position = zlm.Vec3.new(3.0, 0.0, 0.0);
         const origin = zlm.Vec3.new(0.0, 0.0, 0.0);
         const look_direction = origin.sub(position).normalize();
         
-        return Camera{
-            .position = position,
-            .look = look_direction, // Look towards origin
-            .up = zlm.Vec3.new(0.0, 1.0, 0.0), // Y-up coordinate system
-            .right = zlm.Vec3.new(1.0, 0.0, 0.0), // Will be recalculated in init
-            .fov_degrees = 60.0, // 60 degree field of view
-            .aspect_ratio = 16.0 / 9.0, // 16:9 aspect ratio
-            .near_plane = 0.1, // Near clipping plane
-            .far_plane = 100.0, // Far clipping plane
-        };
+        // Use init to properly calculate the LUR frame
+        return Camera.init(
+            position,
+            look_direction,
+            zlm.Vec3.new(0.0, 0.0, 1.0), // Z-up coordinate system
+            60.0, // 60 degree field of view
+            16.0 / 9.0, // 16:9 aspect ratio
+           0.1, // Near clipping plane
+           100.0 // Far clipping plane
+        );
     }
     
-    /// Generate the view matrix using the LUR frame
-    pub fn getViewMatrix(self: *const Camera) zlm.Mat4 {
-        // Create the view matrix using the camera's LUR frame
-        // This transforms world coordinates to camera/view coordinates
-        const view_matrix = zlm.Mat4{
-            .fields = [4][4]f32{
-                [4]f32{ self.right.x, self.right.y, self.right.z, 0.0 },
-                [4]f32{ self.up.x, self.up.y, self.up.z, 0.0 },
-                [4]f32{ -self.look.x, -self.look.y, -self.look.z, 0.0 },
-                [4]f32{ 0.0, 0.0, 0.0, 1.0 },
-            },
-        };
-        
-        // Translate by negative position
-        const translation = zlm.Mat4.createTranslationXYZ(-self.position.x, -self.position.y, -self.position.z);
-        
-        return view_matrix.mul(translation);
+    /// Generate the view matrix - start with identity for debugging
+    pub fn getViewMatrix(_: *const Camera) zlm.Mat4 {
+        // Start with identity matrix to isolate the issue
+        return zlm.Mat4.identity;
     }
     
-    /// Generate the perspective projection matrix
-    pub fn getProjectionMatrix(self: *const Camera) zlm.Mat4 {
-        const fov_radians = self.fov_degrees * std.math.pi / 180.0;
-        const tan_half_fov = @tan(fov_radians / 2.0);
-        
-        // Calculate the projection matrix components
-        const f = 1.0 / tan_half_fov;
-        const aspect = self.aspect_ratio;
-        const near = self.near_plane;
-        const far = self.far_plane;
-        
-        // Perspective projection matrix (OpenGL-style)
+    /// Generate a simple orthographic projection matrix for debugging
+    pub fn getProjectionMatrix(_: *const Camera) zlm.Mat4 {
+        // Simple orthographic projection: scale down the triangle to fit in [-1,1] range
+        const scale = 0.5; // Make triangle smaller
         return zlm.Mat4{
             .fields = [4][4]f32{
-                [4]f32{ f / aspect, 0.0, 0.0, 0.0 },
-                [4]f32{ 0.0, f, 0.0, 0.0 },
-                [4]f32{ 0.0, 0.0, (far + near) / (near - far), (2.0 * far * near) / (near - far) },
-                [4]f32{ 0.0, 0.0, -1.0, 0.0 },
+                [4]f32{ scale, 0.0, 0.0, 0.0 },
+                [4]f32{ 0.0, scale, 0.0, 0.0 },
+                [4]f32{ 0.0, 0.0, 1.0, 0.0 },
+                [4]f32{ 0.0, 0.0, 0.0, 1.0 },
             },
         };
     }
@@ -113,7 +92,8 @@ pub const Camera = struct {
     pub fn getViewOnlyMatrix(self: *const Camera, model_matrix: zlm.Mat4) zlm.Mat4 {
         const view_matrix = self.getViewMatrix();
         
-        // Just View * Model (no projection)
+        // Correct order: View * Model
+        // This transforms from model space -> world space -> view space
         return view_matrix.mul(model_matrix);
     }
     
