@@ -95,43 +95,43 @@ pub fn main() !void {
     var cube_geometry = try Geometry.initCube();
     defer cube_geometry.deinit();
     
-    // Create materials for the cubes (same shader, but different instances)
+    // Create materials for the cubes (separate instances)
     var parent_material = try Material.init(allocator, "resources/shaders/triangle.v.glsl", "resources/shaders/triangle.f.glsl");
     defer parent_material.deinit();
     
     var child_material = try Material.init(allocator, "resources/shaders/triangle.v.glsl", "resources/shaders/triangle.f.glsl");
     defer child_material.deinit();
     
-    // Create parent cube (larger, slower rotation)
+    // Create parent cube at (0, 1, 0) spinning about Z axis
     var parent_cube = try SceneGraphNode.init(allocator, &cube_geometry, &parent_material);
     defer parent_cube.deinit();
     
-    // Set parent transform (translate and scale)
-    const parent_translation = zlm.Mat4.createTranslation(zlm.Vec3.new(0.0, 0.0, 0.0)); // At origin
-    const parent_scale = zlm.Mat4.createScale(1.0, 1.0, 1.0); // Normal size
-    parent_cube.setTransform(parent_scale.mul(parent_translation));
-    parent_cube.x_rotation_speed = 0.5; // Slow rotation
-    parent_cube.y_rotation_speed = 0.3;
-    parent_cube.z_rotation_speed = 0.2;
+    // Set parent cube position and properties
+    parent_cube.setPosition(zlm.Vec3.new(0.0, 1.0, 0.0));
+    parent_cube.setScale(zlm.Vec3.one);
     
-    // Create child cube (smaller, faster rotation, offset from parent)
+    // Parent rotates ONLY about local Z axis
+    parent_cube.z_rotation_speed = 1.0;
+    
+    // Create child cube at (0, 1, 0) relative to parent (no rotation)
     var child_cube = try SceneGraphNode.init(allocator, &cube_geometry, &child_material);
     defer child_cube.deinit();
     
-    // Set child transform (offset from parent)
-    const child_translation = zlm.Mat4.createTranslation(zlm.Vec3.new(3.0, 0.0, 0.0)); // 3 units to the right
-    const child_scale = zlm.Mat4.createScale(0.5, 0.5, 0.5); // 50% smaller
-    child_cube.setTransform(child_scale.mul(child_translation));
-    child_cube.x_rotation_speed = 1.0; // Faster rotation
-    child_cube.y_rotation_speed = 1.5;
-    child_cube.z_rotation_speed = 0.8;
+    // Set child cube position (relative to parent) and scale
+    child_cube.setPosition(zlm.Vec3.new(0.0, 1.0, 0.0));
+    child_cube.setScale(zlm.Vec3.new(0.7, 0.7, 0.7));
+    
+    // Child has no rotation of its own (already default 0.0)
     
     // Create parent-child relationship
     try parent_cube.addChild(&child_cube);
     
-    std.debug.print("Created parent-child cube scene:\n", .{});
-    std.debug.print("  Parent: normal size, slow rotation at origin\n", .{});
-    std.debug.print("  Child: smaller, faster rotation, offset from parent\n", .{});
+    std.debug.print("Created parent cube at (0, 1, 0) spinning about its local Z axis\n", .{});
+    std.debug.print("Created child cube (70%% scale) at (0, 1, 0) relative to parent\n", .{});
+    std.debug.print("\nExpected behavior:\n", .{});
+    std.debug.print("  - Parent: spins in place at world position (0, 1, 0)\n", .{});
+    std.debug.print("  - Child: orbits around parent while rotating to stay aligned with parent frame\n", .{});
+    std.debug.print("  - Child initially at world position (0, 2, 0), orbits in XY plane\n", .{});
     
 
     std.debug.print("OpenGL context created successfully\n", .{});
@@ -171,13 +171,72 @@ pub fn main() !void {
         const delta_time: f32 = @as(f32, @floatFromInt(delta_ms)) / 1000.0;
         last_time = current_time;
         
-        // Update scene graph node animation (recursive - updates parent and all children)
+        // Update scene graph node animation (updates parent and all children)
         parent_cube.update(delta_time);
+        
+        // Debug: Print transforms periodically
+        const debug_interval: u64 = 1000; // milliseconds
+        if (current_time % debug_interval < delta_ms) {
+            std.debug.print("\n=== Transform Debug (time={d:.3}s) ===\n", .{@as(f32, @floatFromInt(current_time)) / 1000.0});
+            
+            const parent_local = parent_cube.getTransform();
+            const parent_world = parent_cube.getWorldTransform();
+            const child_local = child_cube.getTransform();
+            const child_world = child_cube.getWorldTransform();
+            
+            std.debug.print("Parent local position: ({d:.3}, {d:.3}, {d:.3})\n", .{
+                parent_local.fields[3][0],
+                parent_local.fields[3][1], 
+                parent_local.fields[3][2],
+            });
+            std.debug.print("Parent world position: ({d:.3}, {d:.3}, {d:.3})\n", .{
+                parent_world.fields[3][0],
+                parent_world.fields[3][1], 
+                parent_world.fields[3][2],
+            });
+            
+            // Show parent's rotation matrix elements to see if it's actually rotating
+            std.debug.print("Parent rotation (row 0): ({d:.3}, {d:.3}, {d:.3})\n", .{
+                parent_world.fields[0][0],
+                parent_world.fields[0][1],
+                parent_world.fields[0][2],
+            });
+            
+            std.debug.print("Child local position: ({d:.3}, {d:.3}, {d:.3})\n", .{
+                child_local.fields[3][0],
+                child_local.fields[3][1], 
+                child_local.fields[3][2],
+            });
+            std.debug.print("Child world position: ({d:.3}, {d:.3}, {d:.3})\n", .{
+                child_world.fields[3][0],
+                child_world.fields[3][1],
+                child_world.fields[3][2],
+            });
+            std.debug.print("Child has parent: {}\n", .{child_cube.parent != null});
+            std.debug.print("Child rotation speeds: x={d:.3}, y={d:.3}, z={d:.3}\n", .{
+                child_cube.x_rotation_speed,
+                child_cube.y_rotation_speed,
+                child_cube.z_rotation_speed,
+            });
+            
+            // Check if child world position is changing (should orbit)
+            const child_x = child_world.fields[3][0];
+            const child_y = child_world.fields[3][1];
+            const radius = @sqrt(child_x * child_x + child_y * child_y);
+            std.debug.print("Child orbit radius in XY: {d:.3}\n", .{radius});
+            
+            // Check child's orientation (first basis vector)
+            std.debug.print("Child X-axis direction: ({d:.3}, {d:.3}, {d:.3})\n", .{
+                child_world.fields[0][0],
+                child_world.fields[0][1],
+                child_world.fields[0][2],
+            });
+        }
 
         // Clear the screen (dark grey background)
         renderer_utils.clearScreen(0.1, 0.1, 0.1, 1.0);
 
-        // Render the scene (recursive - renders parent and all children)
+        // Render the scene (renders parent and all children)
         parent_cube.render(&camera);
         
         // Render coordinate axes for reference

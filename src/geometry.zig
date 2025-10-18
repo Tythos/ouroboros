@@ -105,43 +105,43 @@ pub const Geometry = struct {
         
         // Define cube vertices with colored faces
         // Each vertex: [x, y, z, r, g, b]
-        // Cube is centered at origin with size 2x2x2
+        // Cube is centered at origin with size 1x1x1 (from -0.5 to +0.5)
         const vertices = [_]f32{
-            // Front face (Z = +1) - Red
-            -1.0, -1.0,  1.0,  1.0, 0.0, 0.0,  // bottom-left
-             1.0, -1.0,  1.0,  1.0, 0.0, 0.0,  // bottom-right
-             1.0,  1.0,  1.0,  1.0, 0.0, 0.0,  // top-right
-            -1.0,  1.0,  1.0,  1.0, 0.0, 0.0,  // top-left
+            // Front face (Z = +0.5) - Red
+            -0.5, -0.5,  0.5,  1.0, 0.0, 0.0,  // bottom-left
+             0.5, -0.5,  0.5,  1.0, 0.0, 0.0,  // bottom-right
+             0.5,  0.5,  0.5,  1.0, 0.0, 0.0,  // top-right
+            -0.5,  0.5,  0.5,  1.0, 0.0, 0.0,  // top-left
             
-            // Back face (Z = -1) - Green
-            -1.0, -1.0, -1.0,  0.0, 1.0, 0.0,  // bottom-left
-            -1.0,  1.0, -1.0,  0.0, 1.0, 0.0,  // top-left
-             1.0,  1.0, -1.0,  0.0, 1.0, 0.0,  // top-right
-             1.0, -1.0, -1.0,  0.0, 1.0, 0.0,  // bottom-right
+            // Back face (Z = -0.5) - Green
+            -0.5, -0.5, -0.5,  0.0, 1.0, 0.0,  // bottom-left
+            -0.5,  0.5, -0.5,  0.0, 1.0, 0.0,  // top-left
+             0.5,  0.5, -0.5,  0.0, 1.0, 0.0,  // top-right
+             0.5, -0.5, -0.5,  0.0, 1.0, 0.0,  // bottom-right
             
-            // Top face (Y = +1) - Blue
-            -1.0,  1.0, -1.0,  0.0, 0.0, 1.0,  // bottom-left
-            -1.0,  1.0,  1.0,  0.0, 0.0, 1.0,  // bottom-right
-             1.0,  1.0,  1.0,  0.0, 0.0, 1.0,  // top-right
-             1.0,  1.0, -1.0,  0.0, 0.0, 1.0,  // top-left
+            // Top face (Y = +0.5) - Blue
+            -0.5,  0.5, -0.5,  0.0, 0.0, 1.0,  // bottom-left
+            -0.5,  0.5,  0.5,  0.0, 0.0, 1.0,  // bottom-right
+             0.5,  0.5,  0.5,  0.0, 0.0, 1.0,  // top-right
+             0.5,  0.5, -0.5,  0.0, 0.0, 1.0,  // top-left
             
-            // Bottom face (Y = -1) - Yellow
-            -1.0, -1.0, -1.0,  1.0, 1.0, 0.0,  // bottom-left
-             1.0, -1.0, -1.0,  1.0, 1.0, 0.0,  // bottom-right
-             1.0, -1.0,  1.0,  1.0, 1.0, 0.0,  // top-right
-            -1.0, -1.0,  1.0,  1.0, 1.0, 0.0,  // top-left
+            // Bottom face (Y = -0.5) - Yellow
+            -0.5, -0.5, -0.5,  1.0, 1.0, 0.0,  // bottom-left
+             0.5, -0.5, -0.5,  1.0, 1.0, 0.0,  // bottom-right
+             0.5, -0.5,  0.5,  1.0, 1.0, 0.0,  // top-right
+            -0.5, -0.5,  0.5,  1.0, 1.0, 0.0,  // top-left
             
-            // Right face (X = +1) - Magenta
-             1.0, -1.0, -1.0,  1.0, 0.0, 1.0,  // bottom-left
-             1.0,  1.0, -1.0,  1.0, 0.0, 1.0,  // top-left
-             1.0,  1.0,  1.0,  1.0, 0.0, 1.0,  // top-right
-             1.0, -1.0,  1.0,  1.0, 0.0, 1.0,  // bottom-right
+            // Right face (X = +0.5) - Magenta
+             0.5, -0.5, -0.5,  1.0, 0.0, 1.0,  // bottom-left
+             0.5,  0.5, -0.5,  1.0, 0.0, 1.0,  // top-left
+             0.5,  0.5,  0.5,  1.0, 0.0, 1.0,  // top-right
+             0.5, -0.5,  0.5,  1.0, 0.0, 1.0,  // bottom-right
             
-            // Left face (X = -1) - Cyan
-            -1.0, -1.0, -1.0,  0.0, 1.0, 1.0,  // bottom-left
-            -1.0, -1.0,  1.0,  0.0, 1.0, 1.0,  // bottom-right
-            -1.0,  1.0,  1.0,  0.0, 1.0, 1.0,  // top-right
-            -1.0,  1.0, -1.0,  0.0, 1.0, 1.0,  // top-left
+            // Left face (X = -0.5) - Cyan
+            -0.5, -0.5, -0.5,  0.0, 1.0, 1.0,  // bottom-left
+            -0.5, -0.5,  0.5,  0.0, 1.0, 1.0,  // bottom-right
+            -0.5,  0.5,  0.5,  0.0, 1.0, 1.0,  // top-right
+            -0.5,  0.5, -0.5,  0.0, 1.0, 1.0,  // top-left
         };
         
         // Define indices for the cube (6 faces * 2 triangles * 3 vertices = 36 indices)

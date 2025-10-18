@@ -9,13 +9,18 @@ const Material = @import("material.zig").Material;
 /// References geometry and material, owns transform and animation state
 /// Supports parent-child relationships for scene graph hierarchy
 pub const SceneGraphNode = struct {
-    // Transform and animation
-    base_transform: zlm.Mat4,  // Base transform (translation, scale, etc.)
-    transform: zlm.Mat4,       // Final transform (base + animation)
+    // Transform (single 4x4 matrix representing this node's local transform)
+    transform: zlm.Mat4,
+    
+    // Animation state
     elapsed_time: f32,
     x_rotation_speed: f32,
     y_rotation_speed: f32,
     z_rotation_speed: f32,
+    
+    // Static transform components (used to rebuild transform with animation)
+    position: zlm.Vec3,
+    scale: zlm.Vec3,
     
     // Scene graph hierarchy
     parent: ?*SceneGraphNode,
@@ -40,12 +45,13 @@ pub const SceneGraphNode = struct {
         std.debug.print("Scene graph node initialized successfully\n", .{});
         
         return SceneGraphNode{
-            .base_transform = zlm.Mat4.identity,
             .transform = zlm.Mat4.identity,
             .elapsed_time = 0.0,
-            .x_rotation_speed = 1.0,   // radians per second
-            .y_rotation_speed = 1.5,   // slightly faster
-            .z_rotation_speed = 0.7,   // slower
+            .x_rotation_speed = 0.0,
+            .y_rotation_speed = 0.0,
+            .z_rotation_speed = 0.0,
+            .position = zlm.Vec3.zero,
+            .scale = zlm.Vec3.one,
             .parent = null,
             .children = std.ArrayList(*SceneGraphNode).init(allocator),
             .geometry = geometry,
@@ -74,41 +80,58 @@ pub const SceneGraphNode = struct {
         }
     }
     
-    /// Get the world transform matrix (parent transform * local transform)
+    /// Get the world transform matrix
+    /// For row-major matrices: v' = v * (child_local * parent_world)
+    /// This applies child's local transform first, then parent's transform
     pub fn getWorldTransform(self: *const SceneGraphNode) zlm.Mat4 {
         if (self.parent) |parent| {
-            return parent.getWorldTransform().mul(self.transform);
+            return self.transform.mul(parent.getWorldTransform());
         } else {
             return self.transform;
         }
     }
     
     /// Update the node's animation based on elapsed time
+    /// Rebuilds the local transform from position, rotation, and scale
     pub fn update(self: *SceneGraphNode, delta_time: f32) void {
         self.elapsed_time += delta_time;
         
-        // Compute rotation angles based on elapsed time
-        const angle_x = self.elapsed_time * self.x_rotation_speed;
-        const angle_y = self.elapsed_time * self.y_rotation_speed;
-        const angle_z = self.elapsed_time * self.z_rotation_speed;
+        // Build transform: Scale * Rotation * Translation
+        // Standard TRS (Translation-Rotation-Scale) order
         
-        // Create rotation axes
-        const x_axis = zlm.Vec3.new(1.0, 0.0, 0.0);
-        const y_axis = zlm.Vec3.new(0.0, 1.0, 0.0);
-        const z_axis = zlm.Vec3.new(0.0, 0.0, 1.0);
+        // 1. Create scale matrix
+        const scale_matrix = zlm.Mat4.createScale(self.scale.x, self.scale.y, self.scale.z);
         
-        // Create rotation matrices
-        const rotation_x = zlm.Mat4.createAngleAxis(x_axis, angle_x);
-        const rotation_y = zlm.Mat4.createAngleAxis(y_axis, angle_y);
-        const rotation_z = zlm.Mat4.createAngleAxis(z_axis, angle_z);
+        // 2. Create rotation matrix from animation
+        const has_rotation = self.x_rotation_speed != 0.0 or self.y_rotation_speed != 0.0 or self.z_rotation_speed != 0.0;
         
-        // Combine rotations: apply Z, then Y, then X (order matters!)
-        const rotation = rotation_x.mul(rotation_y.mul(rotation_z));
+        const rotation_matrix = if (has_rotation) blk: {
+            const angle_x = self.elapsed_time * self.x_rotation_speed;
+            const angle_y = self.elapsed_time * self.y_rotation_speed;
+            const angle_z = self.elapsed_time * self.z_rotation_speed;
+            
+            const x_axis = zlm.Vec3.new(1.0, 0.0, 0.0);
+            const y_axis = zlm.Vec3.new(0.0, 1.0, 0.0);
+            const z_axis = zlm.Vec3.new(0.0, 0.0, 1.0);
+            
+            const rotation_x = zlm.Mat4.createAngleAxis(x_axis, angle_x);
+            const rotation_y = zlm.Mat4.createAngleAxis(y_axis, angle_y);
+            const rotation_z = zlm.Mat4.createAngleAxis(z_axis, angle_z);
+            
+            // Combine rotations: Z, then Y, then X
+            break :blk rotation_x.mul(rotation_y.mul(rotation_z));
+        } else zlm.Mat4.identity;
         
-        // Apply rotation to the base transform
-        self.transform = self.base_transform.mul(rotation);
+        // 3. Create translation matrix
+        const translation_matrix = zlm.Mat4.createTranslation(self.position);
         
-        // Update all children
+        // 4. Combine in SRT order (for row-major matrices with row vectors)
+        // zlm uses row-major: v' = v * M, so v' = v * (S * R * T)
+        // This applies scale first, then rotate (around local origin), then translate to position
+        const temp = scale_matrix.mul(rotation_matrix);
+        self.transform = temp.mul(translation_matrix);
+        
+        // Update all children recursively
         for (self.children.items) |child| {
             child.update(delta_time);
         }
@@ -157,10 +180,41 @@ pub const SceneGraphNode = struct {
         self.geometry.render();
     }
     
-    /// Set the node's base transform (translation, scale, etc.)
+    /// Set the node's position
+    pub fn setPosition(self: *SceneGraphNode, position: zlm.Vec3) void {
+        self.position = position;
+    }
+    
+    /// Set the node's scale
+    pub fn setScale(self: *SceneGraphNode, scale: zlm.Vec3) void {
+        self.scale = scale;
+    }
+    
+    /// Set the node's transform from a matrix (extracts position and scale)
+    /// Note: This is a convenience method, prefer setting position/scale directly
     pub fn setTransform(self: *SceneGraphNode, transform: zlm.Mat4) void {
-        self.base_transform = transform;
-        self.transform = transform; // Initialize final transform with base
+        // Extract translation from matrix
+        self.position = zlm.Vec3.new(
+            transform.fields[3][0],
+            transform.fields[3][1],
+            transform.fields[3][2],
+        );
+        
+        // Extract scale from matrix (length of basis vectors)
+        const scale_x = @sqrt(transform.fields[0][0] * transform.fields[0][0] + 
+                              transform.fields[0][1] * transform.fields[0][1] + 
+                              transform.fields[0][2] * transform.fields[0][2]);
+        const scale_y = @sqrt(transform.fields[1][0] * transform.fields[1][0] + 
+                              transform.fields[1][1] * transform.fields[1][1] + 
+                              transform.fields[1][2] * transform.fields[1][2]);
+        const scale_z = @sqrt(transform.fields[2][0] * transform.fields[2][0] + 
+                              transform.fields[2][1] * transform.fields[2][1] + 
+                              transform.fields[2][2] * transform.fields[2][2]);
+        
+        self.scale = zlm.Vec3.new(scale_x, scale_y, scale_z);
+        
+        // Rebuild transform
+        self.transform = transform;
     }
     
     /// Get the node's current transform
@@ -211,27 +265,28 @@ test "SceneGraphNode transform management" {
     
     // Create a mock node for testing (without OpenGL initialization)
     var node = SceneGraphNode{
-        .base_transform = zlm.Mat4.identity,
         .transform = zlm.Mat4.identity,
         .elapsed_time = 0.0,
-        .x_rotation_speed = 1.0,
-        .y_rotation_speed = 1.5,
-        .z_rotation_speed = 0.7,
+        .x_rotation_speed = 0.0,
+        .y_rotation_speed = 0.0,
+        .z_rotation_speed = 0.0,
+        .position = zlm.Vec3.zero,
+        .scale = zlm.Vec3.one,
         .parent = null,
         .children = std.ArrayList(*SceneGraphNode).init(std.testing.allocator),
         .geometry = &geometry,
         .material = &material,
     };
     defer node.children.deinit();
-    defer node.children.deinit();
     
     // Test initial state
     try test_utils.expectMat4IdentityDefault(node.getTransform());
     
-    // Test transform setting
-    const translation = zlm.Mat4.createTranslation(zlm.Vec3.new(1.0, 2.0, 3.0));
-    node.setTransform(translation);
-    try test_utils.expectMat4EqualDefault(node.getTransform(), translation);
+    // Test position setting
+    node.setPosition(zlm.Vec3.new(1.0, 2.0, 3.0));
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), node.position.x, 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), node.position.y, 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 3.0), node.position.z, 1e-6);
 }
 
 test "SceneGraphNode animation timing" {
@@ -259,6 +314,8 @@ test "SceneGraphNode animation timing" {
         .x_rotation_speed = 2.0,
         .y_rotation_speed = 1.0,
         .z_rotation_speed = 0.5,
+        .position = zlm.Vec3.zero,
+        .scale = zlm.Vec3.one,
         .parent = null,
         .children = std.ArrayList(*SceneGraphNode).init(std.testing.allocator),
         .geometry = &geometry,
@@ -303,6 +360,8 @@ test "SceneGraphNode rotation mathematics" {
         .x_rotation_speed = 1.0,
         .y_rotation_speed = 1.0,
         .z_rotation_speed = 1.0,
+        .position = zlm.Vec3.zero,
+        .scale = zlm.Vec3.one,
         .parent = null,
         .children = std.ArrayList(*SceneGraphNode).init(std.testing.allocator),
         .geometry = &geometry,
@@ -326,6 +385,7 @@ test "SceneGraphNode rotation mathematics" {
     const expected_rot_z = zlm.Mat4.createAngleAxis(z_axis, expected_angle);
     
     // Test rotation order: Z, then Y, then X
+    // With identity translation and scale, transform should equal rotation
     const expected_combined = expected_rot_x.mul(expected_rot_y.mul(expected_rot_z));
     try test_utils.expectMat4EqualDefault(node.transform, expected_combined);
 }
@@ -355,6 +415,8 @@ test "SceneGraphNode different rotation speeds" {
         .x_rotation_speed = 2.0,
         .y_rotation_speed = 1.0,
         .z_rotation_speed = 0.5,
+        .position = zlm.Vec3.zero,
+        .scale = zlm.Vec3.one,
         .parent = null,
         .children = std.ArrayList(*SceneGraphNode).init(std.testing.allocator),
         .geometry = &geometry,
