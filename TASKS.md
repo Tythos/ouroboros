@@ -70,15 +70,17 @@
 
 - [x] Extract material properties of scene graph node into a new model, including shaders, programs, loading/unloading, and bindings behaviors
 
+- [x] Work through hierarchical scene graph node models with parent/child transforms to verify renderer tree walk (may require slighlty more sophisticated objects, like cubes)
+
+- [x] Research GLTF structure to inform scene graph design and update SceneGraphNode to be GLTF-compatible
+
 ## Active Sprint
 
-- [ ] Work through hierarchical scene graph node models with parent/child transforms to verify renderer tree walk (may require slighlty more sophisticated objects, like cubes)
+- [ ] Basic textured sphere example (ambient lighting only for now, as we don't have a lighting model integrated yet)
 
 ## Backlog
 
-### Epic 2: Content & Scene Architecture
-
-- [ ] Research GLTF structure to inform scene graph design (do this BEFORE implementing scene graph)
+### *EPIC*: Content & Scene Architecture
 
 - [ ] Implement basic mesh loading (start with OBJ or simple format)
 
@@ -90,7 +92,7 @@
 
 - [ ] Implement THREE-like scene graph (Entity → Geometry + Material)
 
-### Epic 3: Renderer Abstraction
+### *EPIC*: Renderer Abstraction
 
 - [ ] Consolidate behind OpenGLRenderer interface (design with WebGPU migration in mind)
 
@@ -98,7 +100,7 @@
 
 - [ ] Design command-buffer style API (prepares for WebGPU)
 
-### Epic 4: Asset Pipeline
+### *EPIC*: Asset Pipeline
 
 - [ ] Define resource pack format and runtime loading
 
@@ -108,7 +110,7 @@
 
 - [ ] Add texture loading and sampling
 
-### Epic 5: Systems & Polish
+### *EPIC*: Systems & Polish
 
 - [ ] Implement pub-sub event system for subsystem communication
 
@@ -120,7 +122,7 @@
 
 - [ ] Improve memory monitoring and leak detection
 
-### Epic 6: ECS Refactor
+### *EPIC*: ECS Refactor
 
 - [ ] Separate static scene data from dynamic behavior
 
@@ -130,7 +132,7 @@
 
 - [ ] Migrate systems incrementally
 
-### Epic 7: Platform & Extensibility
+### *EPIC*: Platform & Extensibility
 
 - [ ] Evaluate scripting options (Zig/Lua/WASM) based on use case
 
